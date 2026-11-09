@@ -1,6 +1,6 @@
 {
-  "name": "Tartil",
-  "short_name": "Tartil",
+  "name": "Təcvid test",
+  "short_name": "Təcvid",
   "description": "Quranı öz telefonunda, mikrofonla izləyərək oxu.",
   "start_url": "./",
   "scope": "./",

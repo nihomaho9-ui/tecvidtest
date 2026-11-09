@@ -1,4 +1,4 @@
-const SHELL = "tartil-shell-v6";
+const SHELL = "tecvid-shell-v1";
 const FONTS = "https://mushafuk.online/yazi-fonts/";
 
 self.addEventListener("install", (event) => {
@@ -8,7 +8,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((key) => key.startsWith("tartil-shell-") && key !== SHELL).map((key) => caches.delete(key))),
+      Promise.all(keys.filter((key) => key.startsWith("tecvid-shell-") && key !== SHELL).map((key) => caches.delete(key))),
     ).then(() => self.clients.claim()),
   );
 });
