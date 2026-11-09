@@ -124,29 +124,80 @@ export function measure(al, at) {
   return { rows, unit, uo, poor };
 }
 
-/** Kinds checked and the ratio under which a kind is "too short". Chosen for low false alarms (phase 1 data). */
+/** Kinds checked and the ratio under which a kind is "too short" (madd6 and the fallback; see RULES for the tuned ones). */
 export const KINDS = { madd4: 1.85, madd6: 2.6, ghunna: 1.45, ikhfa: 1.2 };
 export const REL = 0.72; // and shorter than this share of Husary's own ratio on the same token
 
 /**
- * Tajwid issues of one recited ayah. `ref` = [[tokenIndex, kind, husaryRatio], ...] from the page JSON (optional).
- * Returns [{i, w, kind, r, rRef}] — kind is madd | ghunna | ikhfa.
+ * Rules tuned on dev data (Husary/Alafasy/Minshawi 2:1-41, qdat_bench dev half) for <=1.5% false alarms and checked on
+ * held-out reciters (10 qaris, 36:1-30, 67:1-20) and the qdat_bench test half. See docs/TAJWID-PHASE2.md.
+ *  - madd: ratio below tr AND below q x Husary's ratio on the same token.
+ *  - ghunna / ikhfa: ratio below tr AND the error variant (plain noon / clear noon) is not much less likely (LLR > tl).
+ *  - qalqala at the ayah end: the no-qalqala variant is not much less likely (LLR > tl).
  */
-export function judge(m, ref) {
+export const RULES = {
+  muttasil: { tr: 2.2, q: 0.75 },
+  munfasil: { tr: 2.1, q: 0.8 },
+  lazim: { tr: 2.6, q: 0.72 },
+  ghunna: { tr: 1.9, tl: -10 },
+  ikhfa: { tr: 1.2, tl: -12 },
+  qalqala: { tl: -14 },
+};
+
+/** Madd type of token i: munfasil (hamza starts the next word), muttasil (same word), lazim (6), or other. */
+export function maddType(at, i, mt) {
+  const t = mt?.[i];
+  if (t) return t === "f" ? "munfasil" : t === "t" ? "muttasil" : "lazim";
+  const tok = at.toks[i];
+  if ([...tok].length >= 6) return "lazim";
+  const nx = at.toks[i + 1] || "";
+  if (nx.startsWith("ء")) return at.wi[i + 1] === at.wi[i] ? "muttasil" : "munfasil";
+  return "other";
+}
+
+/**
+ * Tajwid issues of one recited ayah.
+ * ref = the page JSON ayah ({tj: [[i, kind, husaryRatio]], all?: [[i, kind, r, ok, llr, final]], mt?: {i: f|t|l}}), or a bare tj list.
+ * opt.llr(i) = local LLR of token i's error variant (only called for candidates). opt.at = ayah tokens.
+ * Returns [{i, w, kind, sub, r, rRef}] — kind is madd | ghunna | ikhfa | qalqala.
+ */
+export function judge(m, ref, opt = {}) {
   if (!(m.unit > 0) || !(m.uo > 0) || m.poor > 0.15) return [];
-  const refMap = new Map((ref || []).map((x) => [x[0], x]));
+  const R = Array.isArray(ref) ? { tj: ref } : ref || null;
+  const refMap = new Map((R?.tj || []).map((x) => [x[0], x]));
+  const allMap = new Map((R?.all || []).map((x) => [x[0], x]));
   const out = [];
   for (const x of m.rows) {
-    const th = KINDS[x.k];
-    if (!th || x.final || !(x.r > 0)) continue;
     const prev = m.rows[x.i - 1];
     const next = m.rows[x.i + 1];
-    if (x.emit < -3 || (prev && prev.emit < -3) || (next && next.emit < -3)) continue;
+    if (x.i === 0 || x.emit < -3 || (prev && prev.emit < -3) || (next && next.emit < -3)) continue;
+    if (x.k === "qalqala") {
+      if (!x.final || !opt.llr) continue;
+      const h = allMap.get(x.i);
+      if (h && (!h[3] || !(h[4] <= RULES.qalqala.tl))) continue; // Husary's own qalqala here was not clear
+      const l = opt.llr(x.i);
+      if (l > RULES.qalqala.tl) out.push({ i: x.i, w: x.w, kind: "qalqala", sub: "qalqala", r: x.r, rRef: null, llr: l });
+      continue;
+    }
+    if (!KINDS[x.k] || x.final || !(x.r > 0)) continue;
     const r0 = refMap.get(x.i);
-    if (ref && !r0) continue; // Husary's own reading of this token was not usable
-    if (x.r >= th) continue;
-    if (r0 && x.r >= REL * r0[2]) continue;
-    out.push({ i: x.i, w: x.w, kind: x.k.startsWith("madd") ? "madd" : x.k, sub: x.k, r: x.r, rRef: r0 ? r0[2] : null });
+    if (R && !r0) continue; // Husary's own reading of this token was not usable
+    const rH = r0 ? r0[2] : null;
+    if (x.k.startsWith("madd")) {
+      const ty = x.k === "madd6" ? "lazim" : opt.at ? maddType(opt.at, x.i, R?.mt) : "muttasil";
+      const rule = RULES[ty === "munfasil" ? "munfasil" : ty === "lazim" ? "lazim" : "muttasil"];
+      if (!(x.r < rule.tr)) continue;
+      if (rH != null && !(x.r < rule.q * rH)) continue;
+      if (rH == null && !(x.r < KINDS[x.k])) continue;
+      out.push({ i: x.i, w: x.w, kind: "madd", sub: x.k, type: ty, r: x.r, rRef: rH });
+      continue;
+    }
+    const rule = RULES[x.k];
+    if (!(x.r < rule.tr)) continue;
+    if (x.k === "ikhfa" && rH != null && !(x.r < REL * rH)) continue; // ikhfa: also clearly shorter than Husary here (browser clean false flag)
+    if (opt.llr) { const l = opt.llr(x.i); if (!(l > rule.tl)) continue; }
+    else if (!(x.r < KINDS[x.k])) continue;
+    out.push({ i: x.i, w: x.w, kind: x.k, sub: x.k, r: x.r, rRef: rH });
   }
   return out;
 }

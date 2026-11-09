@@ -1,23 +1,34 @@
 // "Çətin" mode tajwid check: madd, ghunna and ikhfa held too short, judged against the reciter's own tempo and
 // Husary's reference reading of the same page (public/tj/<page>.json, built by tools/tajwid-prep.mjs).
-import { CLASSES, ayahTokens, alignAyah, measure, judge, setEquivalence, type TjIssue } from "./tajwid-core.js";
+import { CLASSES, ayahTokens, alignAyah, measure, judge, setEquivalence, errorVariant, siteLLR, tokenClass, type TjIssue } from "./tajwid-core.js";
 
-type RefAyah = { s: number; a: number; url: string; seg: [number, number, number][]; tj: [number, string, number][]; q: number };
+type RefAyah = {
+  s: number; a: number; url: string; seg: [number, number, number][]; tj: [number, string, number][]; q: number;
+  all?: [number, string, number | null, number, number | null, number][]; mt?: Record<string, string>;
+};
 type RefPage = { p: number; ayahs: RefAyah[] };
 type Core = { encodePhonemes: (t: string) => number[] | null; TOKENS: readonly string[] };
 type Corpus = { surahs: { ayahs: { w: string[][] }[] }[] };
 type Runner = { accept: (frames: Float32Array[]) => Promise<{ logProbs: Float32Array; frames: number }>; __tj?: boolean };
 export type TjFound = TjIssue & { s: number; a: number; text: string };
 
-const COLOR: Record<string, string> = { madd: "#0e8a7d", ghunna: "#7a4cc8", ikhfa: "#d9731a" };
-const LABEL: Record<string, string> = { madd: "Məd qısa", ghunna: "Qunnə qısa", ikhfa: "İxfa qısa" };
+const COLOR: Record<string, string> = { madd: "#0e8a7d", ghunna: "#7a4cc8", ikhfa: "#d9731a", qalqala: "#2a6fb0" };
+const LABEL: Record<string, string> = {
+  madd: "Ehtimal: məd qısa",
+  ghunna: "Ehtimal: qunnə qısa",
+  ikhfa: "Ehtimal: ixfa qısa",
+  qalqala: "Ehtimal: qəlqələ yoxdur",
+};
 const RING = 25 * 240; // 4 minutes of decoder frames
 const NOTE = "Avtomatik təcvid rəyi səhv ola bilər, müəllimi əvəz etmir.";
 
 function explain(x: TjIssue): string {
   const heard = x.r < 1.35 ? "Sən ~2 hərəkə uzatdın." : "Sən bir az qısa uzatdın.";
   if (x.sub === "madd6") return `Məd lazim: 6 hərəkə uzadılır. ${heard}`;
+  if (x.type === "munfasil") return `Məd munfəsil (Şatibiyyə yolu): 4–5 hərəkə uzadılır. ${heard}`;
+  if (x.type === "muttasil") return `Məd muttəsil: 4–5 hərəkə uzadılır. ${heard}`;
   if (x.kind === "madd") return `Məd 4–5 hərəkə uzadılmalıdır. ${heard}`;
+  if (x.kind === "qalqala") return "Ayə sonunda sakin qəlqələ hərfi: səsi aydın sıçrat (qəlqələ kubra).";
   if (x.kind === "ghunna") return "Şəddəli nun/mim: qunnəni 2 hərəkə burunda saxla.";
   return "Nun/mim sakin gizlədilir: səsi ~2 hərəkə burunda saxla.";
 }
@@ -143,7 +154,13 @@ export function createTajwid(host: TajwidHost) {
       lp.set(ring.subarray(slot * CLASSES, (slot + 1) * CLASSES), t * CLASSES);
     }
     const al = alignAyah(lp, T, at.ids);
-    const issues = al ? judge(measure(al, at), refAyah.tj) : [];
+    const toks = core.TOKENS;
+    const llr = (i: number): number => {
+      const alt = errorVariant(at.toks[i], tokenClass(at.toks[i]));
+      const id = alt === undefined ? -1 : toks.indexOf(alt);
+      return id >= 0 && al ? siteLLR(lp, T, at.ids, al, i, id) : NaN;
+    };
+    const issues = al ? judge(measure(al, at), refAyah, { llr, at }) : [];
     stats.push(performance.now() - t0);
     const words = corpus.surahs[s - 1].ayahs[a - 1].w;
     const list = issues.map((x) => ({ ...x, s, a, text: words[x.w]?.[2] ?? "" }));

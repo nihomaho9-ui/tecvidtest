@@ -1,7 +1,7 @@
 // Offline Husary murattal reference for the tajwid check: one small JSON per Mushaf page in public/tj/.
 // Usage (from a dir holding model.onnx and node_modules with onnxruntime-node + @tilawa/core):
 //   node tajwid-prep.mjs <work-dir> <worker> <workers> [fromPage] [toPage]   -> per-ayah results (resumable)
-//   node tajwid-prep.mjs <work-dir> pages <out-dir>                           -> build page files from finished ayahs
+//   node tajwid-prep.mjs <work-dir> pages <out-dir> [rule_index.jsonl]        -> build page files from finished ayahs
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -29,8 +29,33 @@ async function segments(s) {
   return all;
 }
 
+// Madd type per token index (f = munfasil, t = muttasil, l = lazim) from Quran-Lab's rule_index.jsonl (Apache-2.0), when given.
+const ruleIndex = new Map();
+function maddTypes(s, a) {
+  const d = ruleIndex.get(`${s}:${a}`);
+  if (!d) return undefined;
+  const tl = maddTypes.tl;
+  const at = core.ayahTokens(corpus.surahs[s - 1].ayahs[a - 1], tl.encodePhonemes, tl.TOKENS);
+  if (!at) return undefined;
+  const MAP = { MonfaselMaddRule: "f", MottaselMaddRule: "t", LazemMaddRule: "l" };
+  const byWord = new Map();
+  for (const p of d.phones) { const t = MAP[p.rule]; if (t && p.base !== "\u064e") (byWord.get(p.word) ?? byWord.set(p.word, []).get(p.word)).push(t); }
+  const mt = {};
+  at.toks.forEach((t, i) => {
+    const k = core.tokenClass(t);
+    if (k !== "madd4" && k !== "madd5" && k !== "madd6") return;
+    const L = byWord.get(at.wi[i]);
+    if (L && L.length) mt[i] = L.shift();
+  });
+  return mt;
+}
+
 if (mode === "pages") {
   const out = arg3;
+  if (arg4) {
+    for (const l of fs.readFileSync(arg4, "utf8").split("\n")) { if (!l) continue; const d = JSON.parse(l); ruleIndex.set(`${d.surah}:${d.ayah}`, d); }
+    maddTypes.tl = await import(path.join(work, "node_modules/@tilawa/core/dist/index.js"));
+  }
   fs.mkdirSync(out, { recursive: true });
   let done = 0;
   const have = [];
@@ -38,7 +63,7 @@ if (mode === "pages") {
     const list = pages[p - 1];
     const rows = list.map(([s, a]) => path.join(work, "ayah", `${s}-${a}.json`));
     if (!rows.length || !rows.every((f) => fs.existsSync(f))) continue;
-    const ayahs = rows.map((f) => JSON.parse(fs.readFileSync(f, "utf8")));
+    const ayahs = rows.map((f) => JSON.parse(fs.readFileSync(f, "utf8"))).map((x) => ({ ...x, mt: maddTypes(x.s, x.a) }));
     fs.writeFileSync(path.join(out, `${p}.json`), JSON.stringify({ v: 1, p, reciter: "Husary murattal", ayahs }));
     have.push(p);
     done += 1;
@@ -69,12 +94,16 @@ async function logprobs(pcm) {
 const worker = Number(mode), workers = Number(arg3), p0 = Number(arg4 || 1), p1 = Number(arg5 || 604);
 const todo = [];
 for (let p = p0; p <= p1; p += 1) for (const [s, a] of pages[p - 1]) todo.push([s, a]);
-const mine = todo.filter((_, i) => i % workers === worker);
+const mineAll = todo.filter((_, i) => i % workers === worker);
+const outOf = ([s, a]) => path.join(work, "ayah", `${s}-${a}.json`);
+const stale = (x) => { try { return !JSON.parse(fs.readFileSync(outOf(x), "utf8")).all; } catch { return true; } };
+// New ayahs first, then older results that lack the all-site data.
+const mine = [...mineAll.filter((x) => !fs.existsSync(outOf(x))), ...mineAll.filter((x) => fs.existsSync(outOf(x)) && stale(x))];
 const segCache = new Map();
 let n = 0;
 for (const [s, a] of mine) {
   const outF = path.join(work, "ayah", `${s}-${a}.json`);
-  if (fs.existsSync(outF)) continue;
+  if (fs.existsSync(outF) && !stale([s, a])) continue;
   try {
     if (!segCache.has(s)) segCache.set(s, await segments(s));
     const e = segCache.get(s).find((x) => x.verse_key === `${s}:${a}`);
@@ -98,6 +127,17 @@ for (const [s, a] of mine) {
         const pv = m.rows[x.i - 1], nx = m.rows[x.i + 1];
         const ok = x.emit >= -3 && pv.emit >= -3 && nx.emit >= -3 && x.r >= th * 1.08;
         if (ok) row.tj.push([x.i, x.k, +x.r.toFixed(2)]);
+      }
+      // Every tajwid site with its ratio, a clear-reading flag and the error-variant LLR, so later rules need no new prep.
+      row.all = [];
+      for (const x of m.rows) {
+        if (x.k === "other" || x.i === 0) continue;
+        const pv = m.rows[x.i - 1], nx = m.rows[x.i + 1];
+        const ok = x.emit >= -3 && pv.emit >= -3 && (!nx || nx.emit >= -3) ? 1 : 0;
+        const alt = core.errorVariant(at.toks[x.i], x.k);
+        const altId = alt === undefined ? undefined : tl.TOKENS.indexOf(alt);
+        const llr = altId >= 0 ? core.siteLLR(lp, T, at.ids, al, x.i, altId) : NaN;
+        row.all.push([x.i, x.k, x.r > 0 ? +x.r.toFixed(2) : null, ok, Number.isFinite(llr) ? +llr.toFixed(1) : null, x.final ? 1 : 0]);
       }
     }
     fs.writeFileSync(outF, JSON.stringify(row));
