@@ -4,6 +4,7 @@ import pagesData from "./data/pages.json";
 import qcfPagesData from "./data/qcf-pages.json";
 import qcfWordsData from "./data/qcf-words.json";
 import qcfAyahsData from "./data/qcf-ayahs.json";
+import { createTajwid } from "./tajwid";
 
 let delayMin = 400;
 let delayStep = 30;
@@ -219,6 +220,13 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   const pageInput = need<HTMLInputElement>(".t-pageno");
   const pageEl = need<HTMLElement>(".t-page");
   const sheet = pageEl;
+  const tj = createTajwid({
+    root,
+    sheet,
+    asset,
+    pageOf: (s, a) => pageOf.get(`${s}:${a}`),
+    retryAyah: (s, a) => void retryTajwid(s, a),
+  });
   const micBtn = need<HTMLButtonElement>(".t-mic");
   const st = need<HTMLElement>(".t-st");
   const sub = need<HTMLElement>(".t-sub");
@@ -236,7 +244,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   let misses: Miss[] = [];
   const strikes = new Map<string, number>();
   const warns = new Set<string>();
-  let sense: "normal" | "sert" = "normal";
+  let sense: "normal" | "sert" | "cetin" = "normal";
   let hifz = false;
   let queueOn = false;
   let lesson: Array<[number, number]> = [];
@@ -261,7 +269,10 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     Object.entries(raw).forEach(([key, n]) => {
       if (n > 0) strikes.set(key, n);
     });
-    if (localStorage.getItem("tartil.sense") === "sert") sense = "sert";
+    {
+      const saved = localStorage.getItem("tartil.sense");
+      if (saved === "sert" || saved === "cetin") sense = saved;
+    }
     hifz = localStorage.getItem("tartil.hifz") === "1";
   } catch {
     /* ignore */
@@ -284,6 +295,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
 
   function paintMisses(): void {
+    tj.paint();
     const rank: Record<string, number> = { "err-skip": 4, "err-miss": 3, "err-repeat": 2, "err-vowel": 1 };
     const mark = new Map<string, string>();
     const put = (key: string, cls: string) => {
@@ -512,10 +524,17 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   applyPace(pace);
   const senseBtn = need<HTMLButtonElement>(".t-sense");
   const hifzBtn = need<HTMLButtonElement>(".t-hifz");
-  function applySense(name: "normal" | "sert"): void {
+  function applySense(name: "normal" | "sert" | "cetin", announce = false): void {
     sense = name;
-    senseBtn.classList.toggle("on", name === "sert");
-    senseBtn.setAttribute("aria-label", name === "sert" ? "Həssaslıq: sərt" : "Həssaslıq: normal");
+    senseBtn.classList.toggle("on", name !== "normal");
+    senseBtn.classList.toggle("hard", name === "cetin");
+    senseBtn.setAttribute("aria-label", name === "cetin" ? "Həssaslıq: çətin (təcvid)" : name === "sert" ? "Həssaslıq: sərt" : "Həssaslıq: normal");
+    tj.set(name === "cetin");
+    if (name === "cetin") tj.prefetch(page);
+    if (announce) {
+      const text = name === "cetin" ? ["Çətin", "Təcvid yoxlaması açıqdır: məd, qunnə, ixfa."] : name === "sert" ? ["Sərt", "Söz xətaları daha diqqətlə yoxlanır."] : ["Normal", "Adi yoxlama."];
+      setStatus(text[0], text[1]);
+    }
     session?.zipformer?.setSlipHead("high");
     try {
       localStorage.setItem("tartil.sense", name);
@@ -523,7 +542,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       /* ignore quota */
     }
   }
-  senseBtn.addEventListener("click", () => applySense(sense === "normal" ? "sert" : "normal"));
+  senseBtn.addEventListener("click", () => applySense(sense === "normal" ? "sert" : sense === "sert" ? "cetin" : "normal", true));
   applySense(sense);
   function applyHifz(on: boolean): void {
     hifz = on;
@@ -1198,6 +1217,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       const total = wordList(surah, ayah).length;
       const idx = Number(parts[2]);
       if (idx === total - 1) {
+        tj.ayahDone(surah, ayah);
         if (surah === seqS && ayah === seqA) seqDone = true;
         noteAyah(surah, ayah);
         shown.add(`num:${surah}:${ayah}`);
@@ -1411,6 +1431,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (!idxs.size) return;
     checkFinishedAyah(surah, ayah);
     if (surah) expectPage();
+    tj.heard(surah, ayah);
     schedule(surah, ayah, [...idxs]);
   }
 
@@ -1532,6 +1553,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       });
     }
     session = created;
+    tj.attach(created.zipformer, core as unknown as { encodePhonemes: (t: string) => number[] | null; TOKENS: readonly string[] }, corpus);
     if (created.zipformer) {
       await created.zipformer.setStructural({ ayahOrder: true, similarVerse: true, timing: "pause" });
       // The slip head added false vowel flags on clean qari recordings and caught nothing extra.
@@ -1768,6 +1790,25 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     });
   }
 
+  async function retryTajwid(s: number, a: number): Promise<void> {
+    quietStop = true;
+    if (micOn || audioStop) await stopMic();
+    quietStop = false;
+    retryKey = `${s}:${a}:*`;
+    const target = pageOf.get(`${s}:${a}`);
+    if (target) page = clampPage(target);
+    await render();
+    try {
+      await startMic();
+    } catch {
+      retryKey = "";
+      root.classList.remove("mic", "retry");
+      return;
+    }
+    const name = AZ[s - 1] ?? String(s);
+    setStatus("Təkrar", `${name} ${a} — ayəni yenidən oxuyun`);
+  }
+
   async function beginRetry(m: Miss): Promise<void> {
     const keepQueue = queueOn;
     quietStop = true;
@@ -1829,6 +1870,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     }
     const engine = await ensureSession();
     engine.reset();
+    tj.newTake();
     engine.zipformer?.setMode("correction");
     shown.clear();
     freshKey = "";
@@ -1951,6 +1993,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         return;
       }
       const slice = pending.slice(0, chunkSize);
+      if (pending.length > chunkSize * 2) tj.dropped();
       pending = pending.length > chunkSize * 2 ? pending.slice(pending.length - chunkSize) : pending.slice(chunkSize);
       feeding = true;
       void engine.feed(slice).catch(() => undefined).then(() => {
@@ -1968,7 +2011,10 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         voiceChunks.push(next.slice());
         voiceSamples += next.length;
       }
-      if (pending.length > chunkSize * 2) pending = pending.slice(pending.length - chunkSize * 2);
+      if (pending.length > chunkSize * 2) {
+        tj.dropped();
+        pending = pending.slice(pending.length - chunkSize * 2);
+      }
       const merged = new Float32Array(pending.length + next.length);
       merged.set(pending, 0);
       merged.set(next, pending.length);
