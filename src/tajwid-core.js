@@ -162,6 +162,7 @@ export function maddType(at, i, mt) {
  * Tajwid issues of one recited ayah.
  * ref = the page JSON ayah ({tj: [[i, kind, husaryRatio]], all?: [[i, kind, r, ok, llr, final]], mt?: {i: f|t|l}}), or a bare tj list.
  * opt.llr(i) = local LLR of token i's error variant (only called for candidates). opt.at = ayah tokens.
+ * opt.munfasil = 2 for the qasr reading of madd munfasil (never flagged), else 4–5 counts.
  * Returns [{i, w, kind, sub, r, rRef}] — kind is madd | ghunna | ikhfa | qalqala.
  */
 export function judge(m, ref, opt = {}) {
@@ -203,6 +204,9 @@ export function judge(m, ref, opt = {}) {
     const rH = r0 ? r0[2] : null;
     if (x.k.startsWith("madd")) {
       const ty = x.k === "madd6" ? "lazim" : opt.at ? maddType(opt.at, x.i, R?.mt) : "muttasil";
+      // Qasr (opt.munfasil === 2): munfasil at 2 counts is a valid reading, so never call it short. No "too long" flag
+      // either: the reference reading (Husary) is 4–5 and holds every munfasil longer than qasr allows.
+      if (ty === "munfasil" && opt.munfasil === 2) continue;
       const rule = RULES[ty === "munfasil" ? "munfasil" : ty === "lazim" ? "lazim" : "muttasil"];
       if (!(x.r < rule.tr)) continue;
       if (rH != null && !(x.r < rule.q * rH)) continue;

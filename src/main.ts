@@ -162,6 +162,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       <button type="button" class="t-ico t-today" aria-label="Bu gün"></button>
       <button type="button" class="t-ico t-speed" aria-label="Sürət"></button>
       <button type="button" class="t-ico t-sense" aria-label="Həssaslıq"></button>
+      <button type="button" class="t-ico t-madd" aria-label="Məd munfəsil: 4–5 hərəkə"></button>
       <button type="button" class="t-ico t-hifz" aria-pressed="false" aria-label="Hifz"></button>
       <button type="button" class="t-ico t-listen" aria-label="Dinlə"></button>
       <button type="button" class="t-ico t-lesson" aria-label="Dərs"></button>
@@ -487,6 +488,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   icon(".t-today", `<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/>`);
   icon(".t-speed", `<path d="M13 3L5 14h7l-1 7 8-11h-7l1-7z"/>`);
   icon(".t-sense", `<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/>`);
+  icon(".t-madd", `<path d="M3 12h18"/><path d="M7 8l-4 4 4 4M17 8l4 4-4 4"/>`);
   icon(".t-hifz", `<path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/>`);
   icon(".t-listen", `<path d="M8 5v14l11-7L8 5z"/>`);
   icon(".t-lesson", `<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4z"/>`);
@@ -544,6 +546,35 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
   senseBtn.addEventListener("click", () => applySense(sense === "normal" ? "sert" : sense === "sert" ? "cetin" : "normal", true));
   applySense(sense);
+  // Madd munfasil length the reciter follows (Çətin tajwid check): 4–5 counts (default) or 2 (qasr, never flagged short).
+  const maddBtn = need<HTMLButtonElement>(".t-madd");
+  let munfasil: 2 | 4 = 4;
+  try {
+    if (localStorage.getItem("tartil.munfasil") === "2") munfasil = 2;
+  } catch {
+    /* ignore */
+  }
+  function applyMunfasil(n: 2 | 4, announce = false): void {
+    munfasil = n;
+    tj.setMunfasil(n);
+    maddBtn.classList.toggle("on", n === 2);
+    maddBtn.classList.toggle("qasr", n === 2);
+    maddBtn.setAttribute("aria-label", n === 2 ? "Məd munfəsil: 2 hərəkə (qasr)" : "Məd munfəsil: 4–5 hərəkə");
+    maddBtn.title = n === 2 ? "Məd munfəsil: 2 hərəkə (qasr)" : "Məd munfəsil: 4–5 hərəkə";
+    if (announce) {
+      setStatus(
+        n === 2 ? "Məd munfəsil: 2 hərəkə" : "Məd munfəsil: 4–5 hərəkə",
+        n === 2 ? "Qasr: munfəsil 2 hərəkə oxunursa, xəta sayılmır." : "Munfəsil 4–5 hərəkədən qısa oxunursa, Çətin rejimdə qeyd olunur.",
+      );
+    }
+    try {
+      localStorage.setItem("tartil.munfasil", String(n));
+    } catch {
+      /* ignore quota */
+    }
+  }
+  maddBtn.addEventListener("click", () => applyMunfasil(munfasil === 4 ? 2 : 4, true));
+  applyMunfasil(munfasil);
   function applyHifz(on: boolean): void {
     hifz = on;
     root.classList.toggle("hifz", on);

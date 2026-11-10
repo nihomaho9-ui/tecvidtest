@@ -408,6 +408,9 @@ body { margin: 0; }
 
 /* Çətin mode: tajwid badges and review card */
 .t-sense.hard { position: relative; }
+.t-madd { position: relative; }
+.t-madd::after { content: "4"; position: absolute; top: -3px; left: -3px; width: 15px; height: 15px; border-radius: 50%; background: #8a7f6c; color: #fff; font: 700 9px/15px system-ui, sans-serif; text-align: center; }
+.t-madd.qasr::after { content: "2"; background: #7a4cc8; }
 .t-sense.hard::after { content: "T"; position: absolute; top: -3px; left: -3px; width: 15px; height: 15px; border-radius: 50%; background: #7a4cc8; color: #fff; font: 700 9px/15px system-ui, sans-serif; text-align: center; }
 .tartil .w.tj { position: relative; box-shadow: inset 0 -0.09em 0 var(--tjc); }
 .tartil .w.tj::before { content: attr(data-tjn); position: absolute; top: -0.5em; right: -0.15em; width: 17px; height: 17px; border-radius: 50%; background: var(--tjc); color: #fff; font: 700 10px/17px system-ui, sans-serif; text-align: center; z-index: 3; visibility: visible; }

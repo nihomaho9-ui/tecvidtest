@@ -51,6 +51,7 @@ export interface TajwidHost {
 
 export function createTajwid(host: TajwidHost) {
   let on = false;
+  let munfasil: 2 | 4 = 4; // madd munfasil length the reciter follows: 2 (qasr) or 4–5 counts
   let core: Core | null = null;
   let corpus: Corpus | null = null;
   const ring = new Float32Array(RING * CLASSES);
@@ -195,7 +196,7 @@ export function createTajwid(host: TajwidHost) {
     };
     const qprobe = enc && al ? (i: number): number => qprobeScore(enc, T, al.start[i], QPROBE as never) : undefined;
     const qmid = enc && al ? (i: number): number => qprobeScore(enc, T, al.start[i], QMID as never) : undefined;
-    const issues = al ? judge(measure(al, at), refAyah, { llr, at, qprobe, qmid }) : [];
+    const issues = al ? judge(measure(al, at), refAyah, { llr, at, qprobe, qmid, munfasil }) : [];
     stats.push(performance.now() - t0);
     const words = corpus.surahs[s - 1].ayahs[a - 1].w;
     const list = issues.map((x) => ({ ...x, s, a, text: words[x.w]?.[2] ?? "" }));
@@ -331,6 +332,11 @@ export function createTajwid(host: TajwidHost) {
     paint,
     get on() {
       return on;
+    },
+    setMunfasil(n: 2 | 4) {
+      munfasil = n;
+      const w = window as unknown as { __tj?: Record<string, unknown> };
+      w.__tj = { ...(w.__tj || {}), munfasil: n };
     },
     set(v: boolean) {
       on = v;
