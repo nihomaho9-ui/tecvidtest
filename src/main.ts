@@ -77,7 +77,14 @@ const fontLoads = new Map<number, Promise<void>>();
 let namesReady: Promise<void> | null = null;
 
 function asset(path: string): string {
-  return BASE + path.replace(/^\//, "");
+  const rel = BASE + path.replace(/^\//, "");
+  if (typeof document === "undefined") return rel;
+  const rootUrl = new URL(document.baseURI);
+  if (!rootUrl.pathname.endsWith("/")) {
+    const last = rootUrl.pathname.split("/").pop() || "";
+    if (!last.includes(".")) rootUrl.pathname += "/";
+  }
+  return new URL(rel, rootUrl).href;
 }
 
 const LANDSCAPE_PHONE = "(orientation: landscape) and (max-height: 520px)";
