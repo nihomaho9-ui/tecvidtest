@@ -467,13 +467,13 @@ body { margin: 0; }
 .t-set small { color: var(--muted); font-size: 12px; }
 .t-seg { flex: none; display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--chip); }
 .t-seg button { border: 0; background: transparent; padding: 6px 11px; font-size: 13.5px; white-space: nowrap; cursor: pointer; }
-.t-seg button + button { border-left: 1px solid var(--line); }
+.t-seg button + button { border-inline-start: 1px solid var(--line); }
 .t-seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); font-weight: 600; }
 .t-hint { margin: -4px 0 4px; font-size: 12.5px; color: var(--muted); }
 .t-microw select { flex: none; max-width: 60%; height: 32px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip); padding: 0 10px; }
 .t-sheet-sub { margin: 10px 0 6px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .t-acts { display: grid; gap: 8px; }
-.t-act { text-align: left; border: 1px solid var(--line); background: var(--chip); border-radius: 12px; padding: 10px 12px; font-size: 14.5px; cursor: pointer; }
+.t-act { text-align: start; border: 1px solid var(--line); background: var(--chip); border-radius: 12px; padding: 10px 12px; font-size: 14.5px; cursor: pointer; }
 .t-act[hidden] { display: none; }
 .t-act.on { background: var(--ink); color: var(--paper); }
 .t-today { margin: 12px 0 0; font-size: 12.5px; color: var(--muted); }
@@ -481,3 +481,13 @@ body { margin: 0; }
 @media (max-width: 380px) { .t-seg button { padding: 6px 8px; font-size: 12.5px; } }
 .t-lesson .t-onl, .t-lesson.on .t-off { display: none; }
 .t-lesson.on .t-onl { display: inline; }
+
+/* Arabic UI: panels right-to-left (the mushaf page keeps its own dir="rtl"). */
+.tartil.ui-rtl .t-sheet,
+.tartil.ui-rtl .tj-card,
+.tartil.ui-rtl .tj-chip { direction: rtl; }
+.tartil.ui-rtl .tj-card { text-align: right; }
+.tartil.ui-rtl .t-sheet-box { font-family: "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif; }
+.tartil.ui-rtl .t-sheet-sub { letter-spacing: 0; }
+.t-lang { flex: none; height: 32px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip); padding: 0 10px; }
+.t-seg button { max-width: 9.5em; overflow: hidden; text-overflow: ellipsis; }

@@ -3,6 +3,7 @@
 import { CLASSES, ayahTokens, alignAyah, measure, judge, setEquivalence, errorVariant, siteLLR, tokenClass, qprobeScore, type TjIssue } from "./tajwid-core.js";
 import QPROBE from "./tajwid-qprobe.json";
 import QMID from "./tajwid-qmid.json";
+import { t } from "./i18n";
 
 type RefAyah = {
   s: number; a: number; url: string; seg: [number, number, number][]; tj: [number, string, number][]; q: number;
@@ -19,26 +20,21 @@ const ENC = 512;
 export type TjFound = TjIssue & { s: number; a: number; text: string };
 
 const COLOR: Record<string, string> = { madd: "#0e8a7d", ghunna: "#7a4cc8", ikhfa: "#d9731a", qalqala: "#2a6fb0" };
-const LABEL: Record<string, string> = {
-  madd: "Ehtimal: məd qısa",
-  ghunna: "Ehtimal: qunnə qısa",
-  ikhfa: "Ehtimal: ixfa qısa",
-  qalqala: "Ehtimal: qəlqələ yoxdur",
-};
+const LABEL = (kind: string): string =>
+  t(kind === "ghunna" ? "tj.label.ghunna" : kind === "ikhfa" ? "tj.label.ikhfa" : kind === "qalqala" ? "tj.label.qalqala" : "tj.label.madd");
 const RING = 25 * 240; // 4 minutes of decoder frames
-const NOTE = "Avtomatik təcvid rəyi səhv ola bilər, müəllimi əvəz etmir.";
 
 function explain(x: TjIssue): string {
-  const heard = x.r < 1.35 ? "Sən ~2 hərəkə uzatdın." : "Sən bir az qısa uzatdın.";
-  if (x.type === "long") return "Təbii məd 2 hərəkədir; burada daha uzun çəkdin.";
-  if (x.sub === "madd6") return `Məd lazim: 6 hərəkə uzadılır. ${heard}`;
-  if (x.type === "munfasil") return `Məd munfəsil (Şatibiyyə yolu): 4–5 hərəkə uzadılır. ${heard}`;
-  if (x.type === "muttasil") return `Məd muttəsil: 4–5 hərəkə uzadılır. ${heard}`;
-  if (x.kind === "madd") return `Məd 4–5 hərəkə uzadılmalıdır. ${heard}`;
-  if (x.sub === "qalqala-mid") return "Sakin qəlqələ hərfi: səsi yüngülcə sıçrat (qəlqələ suğra).";
-  if (x.kind === "qalqala") return "Ayə sonunda sakin qəlqələ hərfi: səsi aydın sıçrat (qəlqələ kubra).";
-  if (x.kind === "ghunna") return "Şəddəli nun/mim: qunnəni 2 hərəkə burunda saxla.";
-  return "Nun/mim sakin gizlədilir: səsi ~2 hərəkə burunda saxla.";
+  const h = t(x.r < 1.35 ? "tj.heard2" : "tj.heardShort");
+  if (x.type === "long") return t("tj.long");
+  if (x.sub === "madd6") return t("tj.lazim", { h });
+  if (x.type === "munfasil") return t("tj.munfasil", { h });
+  if (x.type === "muttasil") return t("tj.muttasil", { h });
+  if (x.kind === "madd") return t("tj.madd", { h });
+  if (x.sub === "qalqala-mid") return t("tj.qmid");
+  if (x.kind === "qalqala") return t("tj.qfinal");
+  if (x.kind === "ghunna") return t("tj.ghunna");
+  return t("tj.ikhfa");
 }
 
 export interface TajwidHost {
@@ -160,7 +156,7 @@ export function createTajwid(host: TajwidHost) {
       skip("noref");
       if (p && noted !== p) {
         noted = p;
-        quiet("Bu səhifə üçün təcvid məlumatı hələ hazır deyil.");
+        quiet(t("tj.noData"));
       }
       return;
     }
@@ -225,7 +221,7 @@ export function createTajwid(host: TajwidHost) {
       });
     }
     const total = [...found.values()].reduce((n, l) => n + l.length, 0);
-    chip.textContent = `Təcvid ${total}`;
+    chip.textContent = t("tj.chip", { n: total });
     if (!total) chip.hidden = true;
   }
 
@@ -253,7 +249,12 @@ export function createTajwid(host: TajwidHost) {
     grab.className = "tj-grab";
     const head = document.createElement("div");
     head.className = "tj-ch";
-    head.innerHTML = `<b>Ayə ${a} — təcvid rəyi</b><span>${list.length} qeyd</span>`;
+    head.replaceChildren();
+    const hb = document.createElement("b");
+    hb.textContent = t("tj.head", { a });
+    const hn = document.createElement("span");
+    hn.textContent = t("tj.count", { n: list.length });
+    head.append(hb, hn);
     card.append(grab, head);
     list.forEach((x, n) => {
       const row = document.createElement("div");
@@ -268,7 +269,7 @@ export function createTajwid(host: TajwidHost) {
       const mid = document.createElement("div");
       mid.className = "tj-mid";
       const b = document.createElement("b");
-      b.textContent = x.type === "long" ? "Ehtimal: məd uzun" : LABEL[x.kind];
+      b.textContent = x.type === "long" ? t("tj.label.long") : LABEL(x.kind);
       const d = document.createElement("div");
       d.textContent = explain(x);
       mid.append(b, d);
@@ -279,7 +280,7 @@ export function createTajwid(host: TajwidHost) {
     act.className = "tj-act";
     const again = document.createElement("button");
     again.type = "button";
-    again.textContent = "Ayəni yenidən oxu";
+    again.textContent = t("tj.again");
     again.addEventListener("click", () => {
       found.delete(key);
       done.delete(key);
@@ -291,12 +292,12 @@ export function createTajwid(host: TajwidHost) {
     const go = document.createElement("button");
     go.type = "button";
     go.className = "pri";
-    go.textContent = "Davam et";
+    go.textContent = t("tj.go");
     go.addEventListener("click", () => collapse());
     act.append(again, go);
     const note = document.createElement("div");
     note.className = "tj-dis";
-    note.textContent = NOTE;
+    note.textContent = t("tj.note");
     card.append(act, note);
     card.hidden = false;
   }
@@ -330,6 +331,11 @@ export function createTajwid(host: TajwidHost) {
     heard,
     ayahDone,
     paint,
+    /** Redraw the chip and an open card in the current UI language. */
+    relabel() {
+      paint();
+      if (!card.hidden && !collapsed && cardKey) open(cardKey);
+    },
     get on() {
       return on;
     },

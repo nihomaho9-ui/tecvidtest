@@ -5,24 +5,11 @@ import qcfPagesData from "./data/qcf-pages.json";
 import qcfWordsData from "./data/qcf-words.json";
 import qcfAyahsData from "./data/qcf-ayahs.json";
 import { createTajwid } from "./tajwid";
+import { LANGS, applyI18n, getLang, isRtl, onLang, setLang, surahName, t, type Lang } from "./i18n";
 
 let delayMin = 400;
 let delayStep = 30;
 let delayCap = 120;
-const AZ = [
-  "Fatihə", "Bəqərə", "Ali İmran", "Nisa", "Maidə", "Ənam", "Əraf", "Ənfal", "Tövbə", "Yunus",
-  "Hud", "Yusuf", "Rəd", "İbrahim", "Hicr", "Nəhl", "İsra", "Kəhf", "Məryəm", "Taha",
-  "Ənbiya", "Həcc", "Muminun", "Nur", "Furqan", "Şüəra", "Nəml", "Qəsəs", "Ənkəbut", "Rum",
-  "Loğman", "Səcdə", "Əhzab", "Səba", "Fatir", "Yasin", "Saffat", "Sad", "Zümər", "Ğafir",
-  "Fussilət", "Şura", "Zuxruf", "Duxan", "Casiyə", "Əhqaf", "Məhəmməd", "Fəth", "Hucurat", "Qaf",
-  "Zariyat", "Tur", "Nəcm", "Qəmər", "Rəhman", "Vaqiə", "Hədid", "Mucadələ", "Həşr", "Mumtəhənə",
-  "Səff", "Cumuə", "Munafiqun", "Təğabun", "Talaq", "Təhrim", "Mülk", "Qələm", "Haqqə", "Məaric",
-  "Nuh", "Cinn", "Muzzəmmil", "Muddəssir", "Qiyamət", "İnsan", "Mursəlat", "Nəbə", "Naziat", "Əbəsə",
-  "Təkvir", "İnfitar", "Mutaffifin", "İnşiqaq", "Buruc", "Tariq", "Əla", "Ğaşiyə", "Fəcr", "Bələd",
-  "Şəms", "Leyl", "Duha", "Şərh", "Tin", "Ələq", "Qədr", "Bəyyinə", "Zəlzələ", "Adiyat",
-  "Qariə", "Təkasur", "Əsr", "Huməzə", "Fil", "Qureyş", "Maun", "Kövsər", "Kafirun", "Nəsr",
-  "Məsəd", "İxlas", "Fələq", "Nas",
-];
 
 type WordsFile = { names: string[]; ayahs: string[][][] };
 type PagesFile = { pages: number[][][] };
@@ -53,14 +40,11 @@ type ProgressMsg = {
 };
 type Miss = { s: number; a: number; w: number; kind: string; n: number; t: number };
 const MISS_KEY = "tartil.misses";
-const KIND_AZ: Record<string, string> = {
-  possible_omission: "söz düşüb",
-  possible_substitution: "söz səhvdir",
-  possible_vowel: "hərəkə",
-  possible_repetition: "təkrar",
-  possible_skipped_ayah: "ayə keçilib",
-  unclear_ayah: "ayə tutulmayıb",
-};
+const KINDS = ["possible_omission", "possible_substitution", "possible_vowel", "possible_repetition", "possible_skipped_ayah", "unclear_ayah"] as const;
+function kindName(kind: string): string {
+  return (KINDS as readonly string[]).includes(kind) ? t(`kind.${kind}` as Parameters<typeof t>[0]) : t("kind.error");
+}
+const wordAt = (w: number): string => (w >= 0 ? t("word", { w: w + 1 }) : "");
 
 const BASE = import.meta.env.BASE_URL || "/";
 const QCF = "https://mushafuk.online/yazi-fonts/qcf/";
@@ -142,64 +126,65 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   root.innerHTML = `
     <header class="t-top">
       <div class="t-pager">
-        <button type="button" data-dir="-1" aria-label="Əvvəlki səhifə">‹</button>
-        <input class="t-pageno" inputmode="numeric" aria-label="Səhifə" />
-        <button type="button" data-dir="1" aria-label="Növbəti səhifə">›</button>
+        <button type="button" data-dir="-1" data-i18n-aria="nav.prev">‹</button>
+        <input class="t-pageno" inputmode="numeric" data-i18n-aria="nav.page" />
+        <button type="button" data-dir="1" data-i18n-aria="nav.next">›</button>
       </div>
-      <label class="t-ico t-surah-btn" aria-label="Surə">
+      <label class="t-ico t-surah-btn" data-i18n-aria="nav.surah">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4z"/><path d="M5 4a3 3 0 0 0-3 3v13"/></svg>
-        <select class="t-surah" aria-label="Surə"></select>
+        <select class="t-surah" data-i18n-aria="nav.surah"></select>
       </label>
-      <button type="button" class="t-missbtn" aria-expanded="false" aria-label="Xətalar">0</button>
-      <button type="button" class="t-more" aria-expanded="false" aria-haspopup="dialog" aria-label="Ayarlar" title="Ayarlar">
+      <button type="button" class="t-missbtn" aria-expanded="false" data-i18n-aria="miss.btn">0</button>
+      <button type="button" class="t-more" aria-expanded="false" aria-haspopup="dialog" data-i18n-title="set.title">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
     </header>
     <div class="t-sheet" hidden>
-      <div class="t-sheet-box" role="dialog" aria-modal="true" aria-label="Ayarlar">
-        <div class="t-sheet-h"><b>Ayarlar</b><button type="button" class="t-sheet-x">Bağla</button></div>
-        <div class="t-set"><span>Həssaslıq</span><div class="t-seg" data-set="sense"><button type="button" data-v="normal" aria-pressed="false">Normal</button><button type="button" data-v="sert" aria-pressed="false">Sərt</button><button type="button" data-v="cetin" aria-pressed="false">Çətin</button></div></div>
+      <div class="t-sheet-box" role="dialog" aria-modal="true" data-i18n-aria="set.title">
+        <div class="t-sheet-h"><b data-i18n="set.title"></b><button type="button" class="t-sheet-x" data-i18n="close"></button></div>
+        <label class="t-set"><span data-i18n="lang"></span><select class="t-lang" data-i18n-aria="lang"></select></label>
+        <div class="t-set"><span data-i18n="sense"></span><div class="t-seg" data-set="sense"><button type="button" data-v="normal" aria-pressed="false" data-i18n="sense.normal"></button><button type="button" data-v="sert" aria-pressed="false" data-i18n="sense.sert"></button><button type="button" data-v="cetin" aria-pressed="false" data-i18n="sense.cetin"></button></div></div>
         <p class="t-hint t-sense-hint"></p>
-        <div class="t-set"><span>Məd munfəsil <small>(Çətin)</small></span><div class="t-seg" data-set="madd"><button type="button" data-v="4" aria-pressed="false">4–5 hərəkə</button><button type="button" data-v="2" aria-pressed="false">2 hərəkə</button></div></div>
-        <div class="t-set"><span>Hifz rejimi</span><div class="t-seg" data-set="hifz"><button type="button" data-v="0" aria-pressed="false">Söndür</button><button type="button" data-v="1" aria-pressed="false">Aç</button></div></div>
-        <div class="t-set"><span>Açılma sürəti</span><div class="t-seg" data-set="speed"><button type="button" data-v="orta" aria-pressed="false">Orta</button><button type="button" data-v="tez" aria-pressed="false">Tez</button></div></div>
-        <div class="t-set"><span>Səhifə rəngi</span><div class="t-seg" data-set="theme"><button type="button" data-v="cream" aria-pressed="false">Krem</button><button type="button" data-v="white" aria-pressed="false">Ağ</button><button type="button" data-v="black" aria-pressed="false">Qara</button></div></div>
-        <label class="t-set t-microw" hidden><span>Mikrofon</span><select class="t-micpick" aria-label="Mikrofon"></select></label>
-        <div class="t-sheet-sub">Məşq</div>
+        <div class="t-set"><span><span data-i18n="madd"></span> <small class="t-madd-only"></small></span><div class="t-seg" data-set="madd"><button type="button" data-v="4" aria-pressed="false" data-i18n="madd.4"></button><button type="button" data-v="2" aria-pressed="false" data-i18n="madd.2"></button></div></div>
+        <div class="t-set"><span data-i18n="hifz"></span><div class="t-seg" data-set="hifz"><button type="button" data-v="0" aria-pressed="false" data-i18n="off"></button><button type="button" data-v="1" aria-pressed="false" data-i18n="on"></button></div></div>
+        <div class="t-set"><span data-i18n="speed"></span><div class="t-seg" data-set="speed"><button type="button" data-v="orta" aria-pressed="false" data-i18n="speed.orta"></button><button type="button" data-v="tez" aria-pressed="false" data-i18n="speed.tez"></button></div></div>
+        <div class="t-set"><span data-i18n="theme"></span><div class="t-seg" data-set="theme"><button type="button" data-v="cream" aria-pressed="false" data-i18n="theme.cream"></button><button type="button" data-v="white" aria-pressed="false" data-i18n="theme.white"></button><button type="button" data-v="black" aria-pressed="false" data-i18n="theme.black"></button></div></div>
+        <label class="t-set t-microw" hidden><span data-i18n="mic"></span><select class="t-micpick" data-i18n-aria="mic"></select></label>
+        <div class="t-sheet-sub" data-i18n="practice"></div>
         <div class="t-acts">
-          <button type="button" class="t-act t-lesson"><span class="t-off">Dərs: ayələri seç, hər biri 3 dəfə təmiz</span><span class="t-onl">Dərsi dayandır</span></button>
-          <button type="button" class="t-act t-mine" hidden>Səsimi dinlə (əvvəl qari, sonra mən)</button>
-          <button type="button" class="t-act t-back" hidden>Son oxuduğum səhifəyə qayıt</button>
+          <button type="button" class="t-act t-lesson"><span class="t-off" data-i18n="lesson"></span><span class="t-onl" data-i18n="lesson.stop"></span></button>
+          <button type="button" class="t-act t-mine" hidden data-i18n="mine"></button>
+          <button type="button" class="t-act t-back" hidden data-i18n="back"></button>
         </div>
         <p class="t-today"></p>
       </div>
     </div>
     <div class="t-range" hidden>
-      <b>Dərs</b>
-      <select class="t-from" aria-label="Başlanğıc ayə"></select>
+      <b data-i18n="lesson.short"></b>
+      <select class="t-from" data-i18n-aria="range.from"></select>
       <span>–</span>
-      <select class="t-to" aria-label="Son ayə"></select>
-      <button type="button" class="t-ico t-range-go" aria-label="Başla"></button>
+      <select class="t-to" data-i18n-aria="range.to"></select>
+      <button type="button" class="t-ico t-range-go" data-i18n-aria="start"></button>
     </div>
     <main class="t-page" dir="rtl"></main>
-    <p class="t-foot">Tanıma telefonun özündə işləyir. Model və lüğət NPL-1.2 — yalnız qeyri-kommersiya.</p>
+    <p class="t-foot"><span data-i18n="foot"></span></p>
     <div class="t-bar">
-      <button type="button" class="t-mic" aria-pressed="false" aria-label="Mikrofon">
+      <button type="button" class="t-mic" aria-pressed="false" data-i18n-aria="mic">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
       </button>
       <div class="t-status">
-        <b class="t-st">Oxu</b>
-        <span class="t-sub">Mikrofonu açın: ayələr gizlənir, model təsdiqləyəndə açılır.</span>
+        <b class="t-st"></b>
+        <span class="t-sub"></span>
         <div class="t-load" aria-hidden="true"><i></i></div>
         <div class="t-level" aria-hidden="true"><i></i></div>
       </div>
     </div>
     <div class="t-miss" hidden>
-      <div class="t-miss-h"><b>Xəta yerləri</b><span><button type="button" class="t-miss-go">Düzəlt</button><button type="button" class="t-miss-clear">Təmizlə</button></span></div>
+      <div class="t-miss-h"><b data-i18n="miss.title"></b><span><button type="button" class="t-miss-go" data-i18n="miss.fix"></button><button type="button" class="t-miss-clear" data-i18n="miss.clear"></button></span></div>
       <div class="t-miss-list"></div>
     </div>
     <div class="t-sum" hidden>
-      <div class="t-sum-h"><b>Hesab</b><button type="button" class="t-sum-ok">Bağla</button></div>
+      <div class="t-sum-h"><b data-i18n="sum.title"></b><button type="button" class="t-sum-ok" data-i18n="close"></button></div>
       <p class="t-sum-n"></p>
       <ul class="t-sum-list"></ul>
     </div>`;
@@ -210,7 +195,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       foot.appendChild(document.createTextNode(" "));
       const link = document.createElement("a");
       link.href = "/axtaris";
-      link.textContent = "Axtarış";
+      link.dataset.i18n = "search";
+      link.textContent = t("search");
       foot.appendChild(link);
     }
   }
@@ -219,6 +205,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (!el) throw new Error(sel);
     return el;
   }
+  applyI18n(root);
   const surahSel = need<HTMLSelectElement>(".t-surah");
   const pageInput = need<HTMLInputElement>(".t-pageno");
   const pageEl = need<HTMLElement>(".t-page");
@@ -358,13 +345,13 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     });
     const total = misses.reduce((n, m) => n + (m.n || 1), 0);
     missBtn.textContent = String(total);
-    missBtn.setAttribute("aria-label", `Xəta ${total}`);
+    missBtn.setAttribute("aria-label", t("miss.btnN", { n: total }));
     paintToday();
     missList.replaceChildren();
     if (!misses.length) {
       const empty = document.createElement("p");
       empty.className = "t-miss-empty";
-      empty.textContent = "Hələ xəta yoxdur.";
+      empty.textContent = t("miss.none");
       missList.appendChild(empty);
       return;
     }
@@ -372,10 +359,10 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       const row = document.createElement("button");
       row.type = "button";
       row.className = "t-miss-row";
-      const name = AZ[m.s - 1] ?? String(m.s);
-      const kind = KIND_AZ[m.kind] ?? "xəta";
+      const name = surahName(m.s);
+      const kind = kindName(m.kind);
       const times = m.n > 1 ? ` · ${m.n}` : "";
-      row.textContent = `${name} ${m.a}${m.w >= 0 ? `, söz ${m.w + 1}` : ""} — ${kind}${times}`;
+      row.textContent = `${name} ${m.a}${wordAt(m.w)} — ${kind}${times}`;
       row.addEventListener("click", () => {
         queueOn = false;
         void beginRetry(m);
@@ -389,7 +376,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     const a = issue.ayah ?? 0;
     const w = issue.word ?? -1;
     if (!s || !a) return;
-    const kind = issue.kind || "xəta";
+    const kind = issue.kind || "error";
     const prev = misses.find((m) => m.s === s && m.a === a && m.w === w && m.kind === kind);
     if (prev) prev.n += 1;
     else misses.push({ s, a, w, kind, n: 1, t: Date.now() });
@@ -400,8 +387,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     saveMisses();
     paintMisses();
     navigator.vibrate?.(50);
-    const name = AZ[s - 1] ?? String(s);
-    setStatus("Xəta", `${name} ${a}${w >= 0 ? `, söz ${w + 1}` : ""} — ${KIND_AZ[kind] ?? kind}`);
+    const name = surahName(s);
+    setStatus(() => t("st.mistake"), () => `${surahName(s)} ${a}${wordAt(w)} — ${kindName(kind)}`);
   }
 
   function orderedMisses(): Miss[] {
@@ -424,7 +411,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     const next = orderedMisses()[0];
     if (!next) {
       queueOn = false;
-      setStatus("Bitdi", "Bütün xətalar düzəldi.");
+      setStatus(() => t("st.done"), () => t("st.allFixed"));
       queueMicrotask(() => {
         if (micOn) void stopMic();
       });
@@ -445,7 +432,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     const a = issue.ayah ?? 0;
     const w = issue.word ?? -1;
     if (!s || !a) return false;
-    const kind = issue.kind || "xəta";
+    const kind = issue.kind || "error";
     const key = `${s}:${a}:${w}:${kind}`;
     const n = (strikes.get(key) ?? 0) + 1;
     strikes.set(key, n);
@@ -469,7 +456,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   });
   need<HTMLButtonElement>(".t-miss-go").addEventListener("click", () => {
     if (!orderedMisses().length) {
-      setStatus("Xəta yoxdur", "Düzəldiləcək yer qalmayıb.");
+      setStatus(() => t("st.noMiss"), () => t("st.noMissSub"));
       return;
     }
     queueOn = true;
@@ -491,9 +478,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     theme = name;
     root.classList.toggle("theme-white", name === "white");
     root.classList.toggle("theme-black", name === "black");
-    const label = name === "white" ? "ağ" : name === "black" ? "qara" : "krem";
     setSeg("theme", name);
-    void label;
     try {
       localStorage.setItem("tartil.theme", name);
     } catch {
@@ -536,15 +521,13 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   function applySense(name: "normal" | "sert" | "cetin", announce = false): void {
     sense = name;
     setSeg("sense", name);
-    senseHint.textContent =
-      name === "cetin" ? "Söz xətaları + təcvid (məd, qunnə, ixfa, qəlqələ)." : name === "sert" ? "Söz xətaları daha diqqətlə yoxlanır." : "Adi yoxlama.";
+    senseHint.textContent = t(name === "cetin" ? "sense.hint.cetin" : name === "sert" ? "sense.hint.sert" : "sense.hint.normal");
     moreBtn.classList.toggle("hard", name === "cetin");
-    moreBtn.setAttribute("aria-label", name === "cetin" ? "Ayarlar (Çətin: təcvid açıqdır)" : "Ayarlar");
+    moreBtn.setAttribute("aria-label", t(name === "cetin" ? "set.titleHard" : "set.title"));
     tj.set(name === "cetin");
     if (name === "cetin") tj.prefetch(page);
     if (announce) {
-      const text = name === "cetin" ? ["Çətin", "Təcvid yoxlaması açıqdır: məd, qunnə, ixfa."] : name === "sert" ? ["Sərt", "Söz xətaları daha diqqətlə yoxlanır."] : ["Normal", "Adi yoxlama."];
-      setStatus(text[0], text[1]);
+      setStatus(() => t(name === "cetin" ? "sense.cetin" : name === "sert" ? "sense.sert" : "sense.normal"), () => senseHint.textContent || "");
     }
     session?.zipformer?.setSlipHead("high");
     try {
@@ -567,8 +550,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     setSeg("madd", String(n));
     if (announce) {
       setStatus(
-        n === 2 ? "Məd munfəsil: 2 hərəkə" : "Məd munfəsil: 4–5 hərəkə",
-        n === 2 ? "Qasr: munfəsil 2 hərəkə oxunursa, xəta sayılmır." : "Munfəsil 4–5 hərəkədən qısa oxunursa, Çətin rejimdə qeyd olunur.",
+        () => `${t("madd")}: ${t(n === 2 ? "madd.2" : "madd.4")}`,
+        () => t(n === 2 ? "madd.st2" : "madd.st4"),
       );
     }
     try {
@@ -614,12 +597,12 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     micPick.replaceChildren();
     const auto = document.createElement("option");
     auto.value = "";
-    auto.textContent = "Mikrofon";
+    auto.textContent = t("mic");
     micPick.appendChild(auto);
     found.forEach((d, i) => {
       const opt = document.createElement("option");
       opt.value = d.deviceId;
-      opt.textContent = d.label || `Mikrofon ${i + 1}`;
+      opt.textContent = d.label || t("micN", { n: i + 1 });
       micPick.appendChild(opt);
     });
     const keep = savedMic();
@@ -655,9 +638,9 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     const here = pageAyahs();
     const surah = here[0]?.[0] || Number(surahSel.value) || 1;
     const total = words?.ayahs[surah - 1]?.length || 1;
-    const name = AZ[surah - 1] ?? String(surah);
-    fromSel.setAttribute("aria-label", `${name}, başlanğıc`);
-    toSel.setAttribute("aria-label", `${name}, son`);
+    const name = surahName(surah);
+    fromSel.setAttribute("aria-label", t("range.fromS", { name }));
+    toSel.setAttribute("aria-label", t("range.toS", { name }));
     fromSel.replaceChildren();
     toSel.replaceChildren();
     for (let a = 1; a <= total; a += 1) {
@@ -760,11 +743,11 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (!clip) return;
     void (async () => {
       if (micOn || audioStop) await stopMic();
-      const name = AZ[clip.s - 1] ?? String(clip.s);
-      setStatus("Səsim", `${name} ${clip.a} — əvvəl qari, sonra sən.`);
+      const name = surahName(clip.s);
+      setStatus(() => t("st.mine"), () => t("st.mineQari", { p: `${surahName(clip.s)} ${clip.a}` }));
       const ok = await playAyah(clip.s, clip.a);
       if (!ok) return;
-      setStatus("Səsim", `${name} ${clip.a} — sənin oxuyuşun.`);
+      setStatus(() => t("st.mine"), () => t("st.mineYou", { p: `${surahName(clip.s)} ${clip.a}` }));
       await playPcm(clip.pcm);
     })();
   });
@@ -781,8 +764,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
   function paintToday(): void {
     const week = weekTotals();
-    todayEl.setAttribute("aria-label", `Bu gün ${dayAyahs.size} ayə, ${misses.length} xəta. Həftə ${week.ayahs} ayə, ${week.errors} xəta`);
-    todayEl.textContent = `Bu gün: ${dayAyahs.size} ayə, ${misses.length} xəta · Bu həftə: ${week.ayahs} ayə, ${week.errors} xəta`;
+    todayEl.textContent = t("today", { d: dayAyahs.size, e: misses.length, wa: week.ayahs, we: week.errors });
   }
   function weekKey(offset = 0): string {
     const n = new Date();
@@ -841,12 +823,21 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
   paintToday();
 
-  let liveSub = "Mikrofonu açın: ayələr gizlənir, model təsdiqləyəndə açılır.";
+  let liveSub = t("st.readSub");
   let quietOn = false;
-  function setStatus(title: string, detail: string): void {
-    st.textContent = title;
-    liveSub = detail;
-    if (!quietOn) sub.textContent = detail;
+  // Status texts may be thunks so a language change can redraw the current status at once.
+  type Txt = string | (() => string);
+  let lastStatus: [Txt, Txt] = ["", ""];
+  function setStatus(title: Txt, detail: Txt): void {
+    lastStatus = [title, detail];
+    const tx = typeof title === "function" ? title() : title;
+    const dx = typeof detail === "function" ? detail() : detail;
+    st.textContent = tx;
+    liveSub = dx;
+    if (!quietOn) sub.textContent = dx;
+  }
+  function redrawStatus(): void {
+    setStatus(lastStatus[0], lastStatus[1]);
   }
 
   function setProgress(p: number | null): void {
@@ -1071,7 +1062,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   async function render(): Promise<void> {
     const id = ++paint;
     const n = page;
-    if (!pageEl.childElementCount) pageEl.textContent = "Quran açılır…";
+    if (!pageEl.childElementCount) pageEl.textContent = t("loading");
     try {
       await Promise.all([loadNames(), loadPageFont(n)]);
     } catch {
@@ -1266,7 +1257,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
           lockDirty = false;
           rearm = true;
           rewindLock();
-          setStatus("Yenidən", `${AZ[surah - 1] ?? surah} ${ayah} — ayəni təmiz oxuyun.`);
+          setStatus(() => t("st.again"), () => t("st.againSub", { p: `${surahName(surah)} ${ayah}` }));
           applyShown();
           return;
         }
@@ -1275,7 +1266,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         saveMisses();
         paintMisses();
         ayahLock = "";
-        setStatus("Düzəldi", "Ayə təmizdir. Davam edə bilərsiniz.");
+        setStatus(() => t("st.fixed"), () => t("st.fixedSub"));
         if (queueOn) advanceQueue();
       }
     }
@@ -1293,20 +1284,20 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       paintMisses();
       applyShown();
       if (lesson.length || drill) {
-        const name = AZ[bits[0] - 1] ?? String(bits[0]);
+        const name = surahName(bits[0]);
         const again = (why: string) => {
           retryKey = `${bits[0]}:${bits[1]}:*`;
-          setStatus(why, `${name} ${bits[1]} — ${passes}/3`);
+          setStatus(why, `${surahName(bits[0])} ${bits[1]} — ${passes}/3`);
           void beginRetry({ s: bits[0], a: bits[1], w: -1, kind: "ders", n: 1, t: Date.now() });
         };
         if (passDirty) {
           passDirty = false;
-          again("Yenidən");
+          again(t("st.again"));
           return;
         }
         passes += 1;
         if (passes < 3) {
-          again("Təmiz");
+          again(t("st.clean"));
           return;
         }
         passes = 0;
@@ -1321,10 +1312,10 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
           lesson = [];
           lessonAt = 0;
           root.querySelector(".t-lesson")?.classList.remove("on");
-          setStatus("Bitdi", "Səhifə dərsi tamamdır.");
+          setStatus(() => t("st.done"), () => t("st.lessonDone"));
         } else {
           drill = false;
-          setStatus("Bitdi", `${name} ${bits[1]} üç dəfə təmizdir.`);
+          setStatus(() => t("st.done"), () => t("st.drillDone", { p: `${surahName(bits[0])} ${bits[1]}` }));
         }
         retryClose = true;
         queueMicrotask(() => {
@@ -1376,8 +1367,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     }
     if (!seqHold) {
       seqHold = true;
-      const name = AZ[seqS - 1] ?? String(seqS);
-      setStatus("Buraxıldı", `${name} ${seqA} bitməyib. Növbəti ayə açılmır.`);
+      const name = surahName(seqS);
+      setStatus(() => t("st.held"), () => t("st.heldSub", { p: `${surahName(seqS)} ${seqA}` }));
     }
     return false;
   }
@@ -1406,8 +1397,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       timers.set(key, id);
     });
     if (fresh.length && !retryKey) {
-      const name = AZ[surah - 1] ?? String(surah);
-      setStatus("Dinləyirəm", `${name} ${ayah}`);
+      const name = surahName(surah);
+      setStatus(() => t("st.listening"), () => `${surahName(surah)} ${ayah}`);
     }
   }
 
@@ -1448,8 +1439,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
             settling = false;
           }
         }
-        const name = AZ[issue.surah - 1] ?? String(issue.surah);
-        setStatus("Düzəldi", `${name} ${issue.ayah} — söz düzəldi. Ayəni bitirin.`);
+        const name = surahName(issue.surah);
+        setStatus(() => t("st.fixed"), () => t("st.wordFixed", { p: `${surahName(issue.surah)} ${issue.ayah}` }));
         return;
       }
       return;
@@ -1513,7 +1504,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       return hit.arrayBuffer();
     }
     const res = await fetch(url);
-    if (!res.ok || !res.body) throw new Error(`${label} açılmadı`);
+    if (!res.ok || !res.body) throw new Error(t("err.open", { x: label }));
     const total = Number(res.headers.get("content-length") || 0);
     const reader = res.body.getReader();
     const parts: Uint8Array[] = [];
@@ -1547,7 +1538,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (session) return session;
     loadingModel = true;
     micBtn.disabled = true;
-    setStatus("Model yüklənir", "Bir dəfə, təxminən 66 MB. Sonra telefonda qalır.");
+    setStatus(() => t("st.model"), () => t("st.modelSub"));
     setProgress(0.02);
     const ort = await import("onnxruntime-web/wasm");
     const core = await import("@tilawa/core");
@@ -1556,9 +1547,9 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     env.proxy = true;
     env.wasmPaths = new URL(asset("ort/"), window.location.href).href;
     const model = await loadBytes(asset("model.onnx"), "Model");
-    setStatus("Lüğət açılır", "Ayə sözləri hazırlanır…");
+    setStatus(() => t("st.lex"), () => t("st.lexSub"));
     const corpusRes = await fetch(asset("corpus.json"));
-    if (!corpusRes.ok) throw new Error("Lüğət açılmadı");
+    if (!corpusRes.ok) throw new Error(t("err.lex"));
     const corpus: unknown = await corpusRes.json();
     let created: FeedSession;
     try {
@@ -1689,16 +1680,16 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
 
   function showSummary(fixed: boolean, nHeard: number, found: Miss[]): void {
-    sumN.textContent = `Düz söz: ${nHeard}. Xəta: ${found.length}.`;
+    sumN.textContent = t("sum.n", { h: nHeard, e: found.length });
     sumList.replaceChildren();
     found.forEach((m) => {
       const li = document.createElement("li");
-      const name = AZ[m.s - 1] ?? String(m.s);
-      li.textContent = `${name} ${m.a}${m.w >= 0 ? `, söz ${m.w + 1}` : ""} — ${KIND_AZ[m.kind] ?? "xəta"}`;
+      const name = surahName(m.s);
+      li.textContent = `${name} ${m.a}${wordAt(m.w)} — ${kindName(m.kind)}`;
       sumList.appendChild(li);
     });
     sumBox.hidden = false;
-    setStatus(fixed ? "Düzəldi" : "Hesab", sumN.textContent || "");
+    setStatus(() => fixed ? t("st.fixed") : t("sum.title"), sumN.textContent || "");
   }
 
   function setLevel(raw: Float32Array): void {
@@ -1727,7 +1718,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       const avg = calSum / Math.max(1, calN);
       if (avg < 0.012) {
         quietOn = true;
-        sub.textContent = "Yaxınlaş. Səs zəifdir, telefonu yaxın tutun.";
+        sub.textContent = t("lvl.close");
       } else {
         const room = Math.min(12, Math.max(1, 0.08 / avg));
         try {
@@ -1738,7 +1729,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         tapGain?.(room);
         quietOn = false;
         if (!retryKey) {
-          liveSub = "Səs kifayətdir. Oxuyun.";
+          liveSub = t("lvl.ok");
           sub.textContent = liveSub;
         }
       }
@@ -1747,7 +1738,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       if (!quietSince) quietSince = now;
       if (!quietOn && now - quietSince > 1500) {
         quietOn = true;
-        sub.textContent = "Səs gəlmir. Telefonu yaxınlaşdırın.";
+        sub.textContent = t("lvl.none");
       }
       return;
     }
@@ -1815,9 +1806,9 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     stopClip();
     const gen = playGen;
     const url = ayahUrl(surah, ayah);
-    const name = AZ[surah - 1] ?? String(surah);
-    const step = (lesson.length || drill) && passes > 0 ? ` ${passes}/3 təmiz.` : "";
-    setStatus("Dinlə", `Yavaş — ${name} ${ayah}.${step} Sonra təkrar edin.`);
+    const name = surahName(surah);
+    const step = (lesson.length || drill) && passes > 0 ? t("st.step", { n: passes }) : "";
+    setStatus(() => t("st.listen"), () => t("st.listenSub", { p: `${surahName(surah)} ${ayah}`, step }));
     return new Promise((resolve) => {
       const finish = (ok: boolean) => resolve(gen === playGen && ok);
       void (async () => {
@@ -1867,8 +1858,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       root.classList.remove("mic", "retry");
       return;
     }
-    const name = AZ[s - 1] ?? String(s);
-    setStatus("Təkrar", `${name} ${a} — ayəni yenidən oxuyun`);
+    const name = surahName(s);
+    setStatus(() => t("st.repeat"), () => t("st.repeatSub", { p: `${surahName(s)} ${a}` }));
   }
 
   async function beginRetry(m: Miss): Promise<void> {
@@ -1886,8 +1877,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     sumBox.hidden = true;
     const target = pageOf.get(`${m.s}:${m.a}`);
     if (target) page = clampPage(target);
-    const name = AZ[m.s - 1] ?? String(m.s);
-    const place = `${name} ${m.a}${m.w >= 0 ? `, söz ${m.w + 1}` : ""}`;
+    const name = surahName(m.s);
+    const place = `${name} ${m.a}${wordAt(m.w)}`;
     if (!micOn) {
       await render();
       try {
@@ -1897,8 +1888,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         retryKey = "";
         root.classList.remove("mic", "retry");
         levelBar.classList.remove("on");
-        const message = err instanceof Error ? err.message : "Mikrofon açılmadı";
-        setStatus("Alınmadı", message);
+        const message = err instanceof Error ? err.message : t("err.mic");
+        setStatus(() => t("st.failed"), message);
       }
       return;
     }
@@ -1917,7 +1908,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     expectedSurah = m.s;
     await render();
     markRetry();
-    setStatus("Təkrar", `${place} — yalnız bu yer gizlidir`);
+    setStatus(() => t("st.repeat"), () => t("st.onlyHere", { p: place }));
   }
 
   async function startMic(): Promise<void> {
@@ -1927,7 +1918,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     await settlingMic;
     if (micOn) return;
     if (!navigator.mediaDevices?.getUserMedia) {
-      setStatus("Mikrofon yoxdur", "Bu brauzer səs yazmır. Chrome və ya Huawei brauzerində HTTPS ilə açın.");
+      setStatus(() => t("st.noMic"), () => t("st.noMicSub"));
       return;
     }
     const engine = await ensureSession();
@@ -1979,11 +1970,11 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     markRetry();
     if (retrying) {
       const [s, a, w] = retryKey.split(":");
-      const name = AZ[Number(s) - 1] ?? s;
-      const word = w === "*" ? "" : `, söz ${Number(w) + 1}`;
-      setStatus("Təkrar", `${name} ${a}${word} — yalnız bu yer gizlidir`);
+      const name = surahName(Number(s));
+      const word = w === "*" ? "" : wordAt(Number(w));
+      setStatus(() => t("st.repeat"), () => t("st.onlyHere", { p: `${surahName(Number(s))} ${a}${word}` }));
     } else {
-      setStatus("Dinləyirəm", "Ayələr gizləndi. Nömrələr qalır. Təsdiqlənən söz açılır.");
+      setStatus(() => t("st.listening"), () => t("st.hidden"));
     }
     const micId = micPick.value;
     const audio = {
@@ -2217,7 +2208,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       passes = 0;
       root.querySelector(".t-lesson")?.classList.remove("on");
       if (nHeard || found.length) showSummary(fixed, nHeard, found);
-      else setStatus("Oxu", "Mikrofon bağlıdır. Ayələr açıqdır.");
+      else setStatus(() => t("st.read"), () => t("st.micOff"));
     }
     render();
     const stop = audioStop;
@@ -2241,11 +2232,11 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         retryKey = "";
         root.classList.remove("mic", "retry");
         levelBar.classList.remove("on");
-        const message = err instanceof Error ? err.message : "Mikrofon açılmadı";
+        const message = err instanceof Error ? err.message : t("err.mic");
         const denied = /denied|permission|notallowed/i.test(message);
         setStatus(
-          denied ? "İcazə lazımdır" : "Alınmadı",
-          denied ? "Brauzer mikrofonu bloklayıb. İcazəni açıb yenidən basın." : message,
+          () => denied ? t("st.perm") : t("st.failed"),
+          () => denied ? t("st.permSub") : message,
         );
         setProgress(null);
       })
@@ -2318,12 +2309,12 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       if (ayah === 1 && !surahPage.has(surah)) surahPage.set(surah, i + 1);
     }
   });
-  AZ.forEach((name, i) => {
+  for (let i = 1; i <= 114; i += 1) {
     const opt = document.createElement("option");
-    opt.value = String(i + 1);
-    opt.textContent = `${i + 1}. ${name}`;
+    opt.value = String(i);
+    opt.textContent = `${i}. ${surahName(i)}`;
     surahSel.appendChild(opt);
-  });
+  }
   let start = 1;
   let fromHash = 0;
   if (hashMode) {
@@ -2356,8 +2347,43 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     const read = Number(localStorage.getItem("tartil.read") || "") || readPage;
     if (read) go(read);
   });
+  // UI language: panels, buttons and messages only; the mushaf text is never touched.
+  const langSel = need<HTMLSelectElement>(".t-lang");
+  for (const l of LANGS) {
+    const opt = document.createElement("option");
+    opt.value = l.code;
+    opt.textContent = l.name;
+    opt.lang = l.code;
+    langSel.appendChild(opt);
+  }
+  function refreshLang(): void {
+    const lang = getLang();
+    langSel.value = lang;
+    document.documentElement.lang = lang;
+    root.classList.toggle("ui-rtl", isRtl());
+    applyI18n(root);
+    root.querySelectorAll<HTMLElement>(".t-madd-only").forEach((el) => {
+      el.textContent = `(${t("sense.cetin")})`;
+    });
+    [...surahSel.options].forEach((opt) => {
+      const n = Number(opt.value);
+      if (n) opt.textContent = `${n}. ${surahName(n)}`;
+    });
+    applySense(sense);
+    paintMisses();
+    paintToday();
+    if (micPick.options[0] && !micPick.options[0].value) micPick.options[0].textContent = t("mic");
+    tj.relabel();
+    redrawStatus();
+  }
+  langSel.addEventListener("change", () => {
+    const v = langSel.value;
+    if (LANGS.some((l) => l.code === v)) setLang(v as Lang);
+  });
+  onLang(refreshLang);
+  refreshLang();
   void render();
-  setStatus("Oxu", "Mikrofonu açın: ayələr gizlənir, model təsdiqləyəndə açılır.");
+  setStatus(() => t("st.read"), () => t("st.readSub"));
   const onResize = () => fit();
   window.addEventListener("resize", onResize);
   const barWatch = typeof ResizeObserver === "function" ? new ResizeObserver(() => fit()) : null;

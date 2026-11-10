@@ -1,4 +1,4 @@
-const SHELL = "tecvid-shell-v5";
+const SHELL = "tecvid-shell-v6";
 const FONTS = "https://mushafuk.online/yazi-fonts/";
 
 self.addEventListener("install", (event) => {
