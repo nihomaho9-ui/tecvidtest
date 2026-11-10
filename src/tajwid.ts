@@ -29,6 +29,7 @@ const NOTE = "Avtomatik təcvid rəyi səhv ola bilər, müəllimi əvəz etmir.
 
 function explain(x: TjIssue): string {
   const heard = x.r < 1.35 ? "Sən ~2 hərəkə uzatdın." : "Sən bir az qısa uzatdın.";
+  if (x.type === "long") return "Təbii məd 2 hərəkədir; burada daha uzun çəkdin.";
   if (x.sub === "madd6") return `Məd lazim: 6 hərəkə uzadılır. ${heard}`;
   if (x.type === "munfasil") return `Məd munfəsil (Şatibiyyə yolu): 4–5 hərəkə uzadılır. ${heard}`;
   if (x.type === "muttasil") return `Məd muttəsil: 4–5 hərəkə uzadılır. ${heard}`;
@@ -66,6 +67,12 @@ export function createTajwid(host: TajwidHost) {
   let noted = 0;
   const stats: number[] = [];
   let encChecks = 0;
+  const skips: Record<string, number> = {};
+  const skip = (k: string): void => {
+    skips[k] = (skips[k] || 0) + 1;
+    const w = window as unknown as { __tj?: Record<string, unknown> };
+    w.__tj = { ...(w.__tj || { stats, found: [] }), skips };
+  };
 
   const card = document.createElement("div");
   card.className = "tj-card";
@@ -134,7 +141,8 @@ export function createTajwid(host: TajwidHost) {
   function ayahDone(s: number, a: number): void {
     if (!on || !core || !corpus) return;
     const key = `${s}:${a}`;
-    if (done.has(key) || !starts.has(key)) return;
+    if (done.has(key)) return;
+    if (!starts.has(key)) return skip("nostart");
     done.add(key);
     window.setTimeout(() => void check(s, a), 1500);
   }
@@ -146,6 +154,7 @@ export function createTajwid(host: TajwidHost) {
     const ref = p ? await refPage(p) : null;
     const refAyah = ref?.ayahs.find((x) => x.s === s && x.a === a);
     if (!refAyah) {
+      skip("noref");
       if (p && noted !== p) {
         noted = p;
         quiet("Bu səhifə üçün təcvid məlumatı hələ hazır deyil.");
@@ -155,10 +164,10 @@ export function createTajwid(host: TajwidHost) {
     const t0 = performance.now();
     const end = frames;
     const begin = Math.max(end - RING + 1, (starts.get(key) ?? end) - 250, 0);
-    if (lastDrop >= begin) return; // audio was dropped inside this ayah: durations are not trustworthy
+    if (lastDrop >= begin) return skip("drop"); // audio was dropped inside this ayah: durations are not trustworthy
     const T = end - begin;
     const at = ayahTokens(corpus.surahs[s - 1].ayahs[a - 1], core.encodePhonemes, core.TOKENS);
-    if (!at || T < at.ids.length + 5) return;
+    if (!at || T < at.ids.length + 5) return skip("short");
     const lp = new Float32Array(T * CLASSES);
     let encAll = true;
     for (let t = 0; t < T; t += 1) {
@@ -193,7 +202,7 @@ export function createTajwid(host: TajwidHost) {
     paint();
     if (list.length) open(key);
     else if (prev?.length && cardKey === key) close();
-    (window as unknown as { __tj?: unknown }).__tj = { stats, encChecks, found: [...found.values()].flat() };
+    (window as unknown as { __tj?: unknown }).__tj = { stats, encChecks, skips, found: [...found.values()].flat() };
   }
 
   function paint(): void {
@@ -255,7 +264,7 @@ export function createTajwid(host: TajwidHost) {
       const mid = document.createElement("div");
       mid.className = "tj-mid";
       const b = document.createElement("b");
-      b.textContent = LABEL[x.kind];
+      b.textContent = x.type === "long" ? "Ehtimal: məd uzun" : LABEL[x.kind];
       const d = document.createElement("div");
       d.textContent = explain(x);
       mid.append(b, d);

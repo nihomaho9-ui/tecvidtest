@@ -141,6 +141,7 @@ export const RULES = {
   lazim: { tr: 2.6, q: 0.72 },
   ghunna: { tr: 1.9, tl: -10 },
   ikhfa: { tr: 1.2, tl: -12 },
+  long: { tr: 1.4, q: 1.5, tl: -10 }, // natural madd held too long: mid-word only, needs Husary's ratio (page all-site data)
 };
 
 /** Madd type of token i: munfasil (hamza starts the next word), muttasil (same word), lazim (6), or other. */
@@ -172,11 +173,18 @@ export function judge(m, ref, opt = {}) {
     if (x.i === 0 || x.emit < -3 || (prev && prev.emit < -3) || (next && next.emit < -3)) continue;
     if (x.k === "qalqala") {
       if (!x.final || !opt.qprobe) continue;
-      const h = allMap.get(x.i);
-      if (h && !h[3]) continue; // Husary's own reading here was not clear
       // Encoder probe only: the LLR alone flagged 9% of clean ayah ends (33/380, 10 qaris), the probe 0/380.
       const p = opt.qprobe(x.i);
       if (p > 0) out.push({ i: x.i, w: x.w, kind: "qalqala", sub: "qalqala", r: x.r, rRef: null, llr: p });
+      continue;
+    }
+    if (x.k === "madd2") {
+      const L = RULES.long, h = allMap.get(x.i);
+      if (x.final || !(x.r > L.tr) || !opt.at || !opt.llr || !h || !h[3] || !(h[2] > 0)) continue;
+      if (opt.at.wi[x.i + 1] !== opt.at.wi[x.i]) continue; // word end: a pause can stretch it legitimately
+      if (!(h[2] * L.q < x.r)) continue;
+      const l = opt.llr(x.i);
+      if (l > L.tl) out.push({ i: x.i, w: x.w, kind: "madd", sub: "madd2", type: "long", r: x.r, rRef: h[2], llr: l });
       continue;
     }
     if (!KINDS[x.k] || x.final || !(x.r > 0)) continue;
