@@ -151,29 +151,31 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         <select class="t-surah" aria-label="Surə"></select>
       </label>
       <button type="button" class="t-missbtn" aria-expanded="false" aria-label="Xətalar">0</button>
-      <button type="button" class="t-theme" aria-label="Səhifə rəngi: krem">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5c3 3.6 5.5 6.6 5.5 9.6a5.5 5.5 0 0 1-11 0c0-3 2.5-6 5.5-9.6z"/></svg>
-      </button>
-      <button type="button" class="t-more" aria-expanded="false" aria-label="Alətlər">
+      <button type="button" class="t-more" aria-expanded="false" aria-haspopup="dialog" aria-label="Ayarlar" title="Ayarlar">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
     </header>
-    <div class="t-tools" hidden>
-      <button type="button" class="t-ico t-today" aria-label="Bu gün"></button>
-      <button type="button" class="t-ico t-speed" aria-label="Sürət"></button>
-      <button type="button" class="t-ico t-sense" aria-label="Həssaslıq"></button>
-      <button type="button" class="t-ico t-madd" aria-label="Məd munfəsil: 4–5 hərəkə"></button>
-      <button type="button" class="t-ico t-hifz" aria-pressed="false" aria-label="Hifz"></button>
-      <button type="button" class="t-ico t-listen" aria-label="Dinlə"></button>
-      <button type="button" class="t-ico t-lesson" aria-label="Dərs"></button>
-      <button type="button" class="t-ico t-mine" aria-label="Səsim" hidden></button>
-      <button type="button" class="t-ico t-back" aria-label="Son səhifə" hidden></button>
-      <label class="t-ico t-micbtn" aria-label="Mikrofon" hidden>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zM5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
-        <select class="t-micpick" aria-label="Mikrofon"></select>
-      </label>
+    <div class="t-sheet" hidden>
+      <div class="t-sheet-box" role="dialog" aria-modal="true" aria-label="Ayarlar">
+        <div class="t-sheet-h"><b>Ayarlar</b><button type="button" class="t-sheet-x">Bağla</button></div>
+        <div class="t-set"><span>Həssaslıq</span><div class="t-seg" data-set="sense"><button type="button" data-v="normal" aria-pressed="false">Normal</button><button type="button" data-v="sert" aria-pressed="false">Sərt</button><button type="button" data-v="cetin" aria-pressed="false">Çətin</button></div></div>
+        <p class="t-hint t-sense-hint"></p>
+        <div class="t-set"><span>Məd munfəsil <small>(Çətin)</small></span><div class="t-seg" data-set="madd"><button type="button" data-v="4" aria-pressed="false">4–5 hərəkə</button><button type="button" data-v="2" aria-pressed="false">2 hərəkə</button></div></div>
+        <div class="t-set"><span>Hifz rejimi</span><div class="t-seg" data-set="hifz"><button type="button" data-v="0" aria-pressed="false">Söndür</button><button type="button" data-v="1" aria-pressed="false">Aç</button></div></div>
+        <div class="t-set"><span>Açılma sürəti</span><div class="t-seg" data-set="speed"><button type="button" data-v="orta" aria-pressed="false">Orta</button><button type="button" data-v="tez" aria-pressed="false">Tez</button></div></div>
+        <div class="t-set"><span>Səhifə rəngi</span><div class="t-seg" data-set="theme"><button type="button" data-v="cream" aria-pressed="false">Krem</button><button type="button" data-v="white" aria-pressed="false">Ağ</button><button type="button" data-v="black" aria-pressed="false">Qara</button></div></div>
+        <label class="t-set t-microw" hidden><span>Mikrofon</span><select class="t-micpick" aria-label="Mikrofon"></select></label>
+        <div class="t-sheet-sub">Məşq</div>
+        <div class="t-acts">
+          <button type="button" class="t-act t-lesson"><span class="t-off">Dərs: ayələri seç, hər biri 3 dəfə təmiz</span><span class="t-onl">Dərsi dayandır</span></button>
+          <button type="button" class="t-act t-mine" hidden>Səsimi dinlə (əvvəl qari, sonra mən)</button>
+          <button type="button" class="t-act t-back" hidden>Son oxuduğum səhifəyə qayıt</button>
+        </div>
+        <p class="t-today"></p>
+      </div>
     </div>
     <div class="t-range" hidden>
+      <b>Dərs</b>
       <select class="t-from" aria-label="Başlanğıc ayə"></select>
       <span>–</span>
       <select class="t-to" aria-label="Son ayə"></select>
@@ -235,11 +237,42 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   const loadFill = need<HTMLElement>(".t-load i");
   const levelBar = need<HTMLElement>(".t-level");
   const levelFill = need<HTMLElement>(".t-level i");
-  const themeBtn = need<HTMLButtonElement>(".t-theme");
   const sumBox = need<HTMLElement>(".t-sum");
   const sumN = need<HTMLElement>(".t-sum-n");
   const sumList = need<HTMLElement>(".t-sum-list");
   const missBtn = need<HTMLButtonElement>(".t-missbtn");
+  // One settings sheet (☰) instead of a row of icons: every option has a text label.
+  const moreBtn = need<HTMLButtonElement>(".t-more");
+  const setSheet = need<HTMLElement>(".t-sheet");
+  function setSeg(group: string, value: string): void {
+    setSheet.querySelectorAll<HTMLButtonElement>(`.t-seg[data-set="${group}"] button`).forEach((b) => {
+      b.setAttribute("aria-pressed", b.dataset.v === value ? "true" : "false");
+    });
+  }
+  function closeSheet(): void {
+    if (setSheet.hidden) return;
+    setSheet.hidden = true;
+    moreBtn.setAttribute("aria-expanded", "false");
+    moreBtn.classList.remove("on");
+  }
+  moreBtn.addEventListener("click", () => {
+    if (!setSheet.hidden) {
+      closeSheet();
+      return;
+    }
+    rangeBox.hidden = true;
+    setSheet.hidden = false;
+    moreBtn.setAttribute("aria-expanded", "true");
+    moreBtn.classList.add("on");
+    setSheet.querySelector<HTMLButtonElement>(".t-sheet-x")?.focus();
+  });
+  setSheet.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement;
+    if (t === setSheet || t.closest(".t-sheet-x") || t.closest(".t-mine, .t-back")) closeSheet();
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeSheet();
+  });
   const missBox = need<HTMLElement>(".t-miss");
   const missList = need<HTMLElement>(".t-miss-list");
   let misses: Miss[] = [];
@@ -459,8 +492,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     root.classList.toggle("theme-white", name === "white");
     root.classList.toggle("theme-black", name === "black");
     const label = name === "white" ? "ağ" : name === "black" ? "qara" : "krem";
-    themeBtn.setAttribute("aria-label", `Səhifə rəngi: ${label}`);
-    themeBtn.title = `Səhifə rəngi: ${label}`;
+    setSeg("theme", name);
+    void label;
     try {
       localStorage.setItem("tartil.theme", name);
     } catch {
@@ -468,35 +501,12 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     }
   }
   applyTheme(theme);
-  themeBtn.addEventListener("click", () => {
-    applyTheme(themes[(themes.indexOf(theme) + 1) % themes.length]);
-  });
   const todayEl = need<HTMLElement>(".t-today");
-  const tools = need<HTMLElement>(".t-tools");
-  const moreBtn = need<HTMLButtonElement>(".t-more");
-  moreBtn.addEventListener("click", () => {
-    const open = tools.hidden;
-    tools.hidden = !open;
-    if (!open) rangeBox.hidden = true;
-    moreBtn.setAttribute("aria-expanded", open ? "true" : "false");
-    moreBtn.classList.toggle("on", open);
-  });
   const icon = (cls: string, body: string) => {
     const el = root.querySelector(cls);
     if (el && !el.querySelector("svg")) el.insertAdjacentHTML("afterbegin", `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`);
   };
-  icon(".t-today", `<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/>`);
-  icon(".t-speed", `<path d="M13 3L5 14h7l-1 7 8-11h-7l1-7z"/>`);
-  icon(".t-sense", `<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/>`);
-  icon(".t-madd", `<path d="M3 12h18"/><path d="M7 8l-4 4 4 4M17 8l4 4-4 4"/>`);
-  icon(".t-hifz", `<path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/>`);
-  icon(".t-listen", `<path d="M8 5v14l11-7L8 5z"/>`);
-  icon(".t-lesson", `<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4z"/>`);
-  icon(".t-mine", `<path d="M4 12h2l2-5 3 10 2-5h7"/>`);
-  icon(".t-back", `<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>`);
   icon(".t-range-go", `<path d="M8 5v14l11-7L8 5z"/>`);
-  todayEl.addEventListener("click", () => setStatus("Hesab", todayEl.getAttribute("aria-label") || ""));
-  const speedBtn = need<HTMLButtonElement>(".t-speed");
   let pace: "tez" | "orta" = "orta";
   try {
     if (localStorage.getItem("tartil.speed") === "tez") pace = "tez";
@@ -514,23 +524,22 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       delayStep = 30;
       delayCap = 120;
     }
-    speedBtn.classList.toggle("on", name === "tez");
-    speedBtn.setAttribute("aria-label", name === "tez" ? "Sürət: tez" : "Sürət: orta");
+    setSeg("speed", name);
     try {
       localStorage.setItem("tartil.speed", name);
     } catch {
       /* ignore quota */
     }
   }
-  speedBtn.addEventListener("click", () => applyPace(pace === "orta" ? "tez" : "orta"));
   applyPace(pace);
-  const senseBtn = need<HTMLButtonElement>(".t-sense");
-  const hifzBtn = need<HTMLButtonElement>(".t-hifz");
+  const senseHint = need<HTMLElement>(".t-sense-hint");
   function applySense(name: "normal" | "sert" | "cetin", announce = false): void {
     sense = name;
-    senseBtn.classList.toggle("on", name !== "normal");
-    senseBtn.classList.toggle("hard", name === "cetin");
-    senseBtn.setAttribute("aria-label", name === "cetin" ? "Həssaslıq: çətin (təcvid)" : name === "sert" ? "Həssaslıq: sərt" : "Həssaslıq: normal");
+    setSeg("sense", name);
+    senseHint.textContent =
+      name === "cetin" ? "Söz xətaları + təcvid (məd, qunnə, ixfa, qəlqələ)." : name === "sert" ? "Söz xətaları daha diqqətlə yoxlanır." : "Adi yoxlama.";
+    moreBtn.classList.toggle("hard", name === "cetin");
+    moreBtn.setAttribute("aria-label", name === "cetin" ? "Ayarlar (Çətin: təcvid açıqdır)" : "Ayarlar");
     tj.set(name === "cetin");
     if (name === "cetin") tj.prefetch(page);
     if (announce) {
@@ -544,10 +553,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       /* ignore quota */
     }
   }
-  senseBtn.addEventListener("click", () => applySense(sense === "normal" ? "sert" : sense === "sert" ? "cetin" : "normal", true));
   applySense(sense);
   // Madd munfasil length the reciter follows (Çətin tajwid check): 4–5 counts (default) or 2 (qasr, never flagged short).
-  const maddBtn = need<HTMLButtonElement>(".t-madd");
   let munfasil: 2 | 4 = 4;
   try {
     if (localStorage.getItem("tartil.munfasil") === "2") munfasil = 2;
@@ -557,10 +564,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   function applyMunfasil(n: 2 | 4, announce = false): void {
     munfasil = n;
     tj.setMunfasil(n);
-    maddBtn.classList.toggle("on", n === 2);
-    maddBtn.classList.toggle("qasr", n === 2);
-    maddBtn.setAttribute("aria-label", n === 2 ? "Məd munfəsil: 2 hərəkə (qasr)" : "Məd munfəsil: 4–5 hərəkə");
-    maddBtn.title = n === 2 ? "Məd munfəsil: 2 hərəkə (qasr)" : "Məd munfəsil: 4–5 hərəkə";
+    setSeg("madd", String(n));
     if (announce) {
       setStatus(
         n === 2 ? "Məd munfəsil: 2 hərəkə" : "Məd munfəsil: 4–5 hərəkə",
@@ -573,22 +577,29 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       /* ignore quota */
     }
   }
-  maddBtn.addEventListener("click", () => applyMunfasil(munfasil === 4 ? 2 : 4, true));
   applyMunfasil(munfasil);
   function applyHifz(on: boolean): void {
     hifz = on;
     root.classList.toggle("hifz", on);
-    hifzBtn.classList.toggle("on", on);
-    hifzBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    setSeg("hifz", on ? "1" : "0");
     try {
       localStorage.setItem("tartil.hifz", on ? "1" : "0");
     } catch {
       /* ignore quota */
     }
   }
-  hifzBtn.addEventListener("click", () => applyHifz(!hifz));
   applyHifz(hifz);
-  const listenBtn = need<HTMLButtonElement>(".t-listen");
+  setSheet.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>(".t-seg button");
+    const group = btn?.closest<HTMLElement>(".t-seg")?.dataset.set;
+    const v = btn?.dataset.v;
+    if (!btn || !group || !v) return;
+    if (group === "sense" && (v === "normal" || v === "sert" || v === "cetin")) applySense(v, true);
+    else if (group === "madd") applyMunfasil(v === "2" ? 2 : 4, true);
+    else if (group === "hifz") applyHifz(v === "1");
+    else if (group === "speed") applyPace(v === "tez" ? "tez" : "orta");
+    else if (group === "theme" && (v === "cream" || v === "white" || v === "black")) applyTheme(v);
+  });
   const micPick = need<HTMLSelectElement>(".t-micpick");
   function savedMic(): string {
     try {
@@ -613,7 +624,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     });
     const keep = savedMic();
     if ([...micPick.options].some((opt) => opt.value === keep)) micPick.value = keep;
-    micPick.closest<HTMLElement>(".t-micbtn")?.toggleAttribute("hidden", found.length < 2);
+    micPick.closest<HTMLElement>(".t-microw")?.toggleAttribute("hidden", found.length < 2);
   }
   micPick.addEventListener("change", () => {
     try {
@@ -623,17 +634,6 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     }
   });
   void listMics();
-  listenBtn.addEventListener("click", () => {
-    const pair = pages[page - 1]?.[0];
-    if (!pair) return;
-    queueOn = false;
-    lesson = [];
-    lessonAt = 0;
-    passes = 0;
-    drill = true;
-    root.querySelector(".t-lesson")?.classList.remove("on");
-    void beginRetry({ s: pair[0], a: pair[1], w: -1, kind: "oxu", n: 1, t: Date.now() });
-  });
   const lessonBtn = need<HTMLButtonElement>(".t-lesson");
   const mineBtn = need<HTMLButtonElement>(".t-mine");
   const backBtn = need<HTMLButtonElement>(".t-back");
@@ -684,6 +684,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       if (micOn) void stopMic();
       return;
     }
+    closeSheet();
     if (!rangeBox.hidden) {
       rangeBox.hidden = true;
       return;
@@ -781,6 +782,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   function paintToday(): void {
     const week = weekTotals();
     todayEl.setAttribute("aria-label", `Bu gün ${dayAyahs.size} ayə, ${misses.length} xəta. Həftə ${week.ayahs} ayə, ${week.errors} xəta`);
+    todayEl.textContent = `Bu gün: ${dayAyahs.size} ayə, ${misses.length} xəta · Bu həftə: ${week.ayahs} ayə, ${week.errors} xəta`;
   }
   function weekKey(offset = 0): string {
     const n = new Date();
