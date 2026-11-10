@@ -65,6 +65,7 @@ export function createTajwid(host: TajwidHost) {
   let cardKey = "";
   let cardShownAt = 0;
   let collapsed = false;
+  let lastKey = "";
   let noted = 0;
   const stats: number[] = [];
   let encChecks = 0;
@@ -136,7 +137,6 @@ export function createTajwid(host: TajwidHost) {
     if (!on) return;
     const key = `${s}:${a}`;
     if (!starts.has(key)) starts.set(key, frames);
-    if (!card.hidden && !collapsed && cardKey !== key && performance.now() - cardShownAt > 2500) collapse();
   }
 
   function ayahDone(s: number, a: number): void {
@@ -201,9 +201,15 @@ export function createTajwid(host: TajwidHost) {
     const prev = found.get(key);
     if (list.length) found.set(key, list);
     else found.delete(key);
+    if (list.length) lastKey = key;
+    else if (lastKey === key) lastKey = [...found.keys()].pop() ?? "";
     paint();
-    if (list.length) open(key);
-    else if (prev?.length && cardKey === key) close();
+    if (list.length) {
+      if (!card.hidden && !collapsed) {
+        if (cardKey === key) open(key);
+        else head();
+      } else pulse();
+    } else if (prev?.length && cardKey === key) close();
     (window as unknown as { __tj?: unknown }).__tj = { stats, encChecks, skips, found: [...found.values()].flat() };
   }
 
@@ -225,6 +231,36 @@ export function createTajwid(host: TajwidHost) {
     const total = [...found.values()].reduce((n, l) => n + l.length, 0);
     chip.textContent = t("tj.chip", { n: total });
     if (!total) chip.hidden = true;
+    else if (card.hidden && !chip.classList.contains("muted")) chip.hidden = false;
+  }
+  function pulse(): void {
+    if (!card.hidden && !collapsed) return;
+    chip.hidden = false;
+    chip.classList.remove("new");
+    void chip.offsetWidth;
+    chip.classList.add("new");
+  }
+  // Ayahs with notes in mushaf order, for the ‹ › switch in the card.
+  function noteKeys(): string[] {
+    return [...found.keys()]
+      .filter((k) => found.get(k)?.length)
+      .sort((x, y) => {
+        const [s1, a1] = x.split(":").map(Number);
+        const [s2, a2] = y.split(":").map(Number);
+        return s1 - s2 || a1 - a2;
+      });
+  }
+  let headEl: HTMLElement | null = null;
+  function head(): void {
+    if (!headEl || !cardKey) return;
+    const keys = noteKeys();
+    const at = keys.indexOf(cardKey);
+    const nav = headEl.querySelector<HTMLElement>(".tj-nav");
+    if (!nav) return;
+    nav.hidden = keys.length < 2;
+    nav.querySelector(".tj-pos")!.textContent = `${at + 1}/${keys.length}`;
+    (nav.querySelector(".tj-prev") as HTMLButtonElement).disabled = at <= 0;
+    (nav.querySelector(".tj-next") as HTMLButtonElement).disabled = at < 0 || at >= keys.length - 1;
   }
 
   function quiet(text: string): void {
@@ -249,15 +285,37 @@ export function createTajwid(host: TajwidHost) {
     card.replaceChildren();
     const grab = document.createElement("div");
     grab.className = "tj-grab";
-    const head = document.createElement("div");
-    head.className = "tj-ch";
-    head.replaceChildren();
+    const top = document.createElement("div");
+    top.className = "tj-ch";
     const hb = document.createElement("b");
     hb.textContent = t("tj.head", { a });
     const hn = document.createElement("span");
     hn.textContent = t("tj.count", { n: list.length });
-    head.append(hb, hn);
-    card.append(grab, head);
+    const nav = document.createElement("span");
+    nav.className = "tj-nav";
+    const mk = (cls: string, label: string, txt: string, step: number) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = cls;
+      btn.textContent = txt;
+      btn.setAttribute("aria-label", t(label));
+      btn.addEventListener("click", () => {
+        const keys = noteKeys();
+        const next = keys[keys.indexOf(cardKey) + step];
+        if (next) open(next);
+      });
+      return btn;
+    };
+    const pos = document.createElement("span");
+    pos.className = "tj-pos";
+    const rtl = host.root.classList.contains("ui-rtl");
+    nav.append(mk("tj-prev", "tj.prev", rtl ? "›" : "‹", -1), pos, mk("tj-next", "tj.next", rtl ? "‹" : "›", 1));
+    const right = document.createElement("span");
+    right.className = "tj-chr";
+    right.append(hn, nav);
+    top.append(hb, right);
+    card.append(grab, top);
+    headEl = top;
     list.forEach((x, n) => {
       const row = document.createElement("div");
       row.className = "tj-it";
@@ -310,6 +368,7 @@ export function createTajwid(host: TajwidHost) {
     note.textContent = t("tj.note");
     card.append(act, note);
     card.hidden = false;
+    head();
   }
   function collapse(): void {
     card.hidden = true;
@@ -324,8 +383,10 @@ export function createTajwid(host: TajwidHost) {
   }
   chip.addEventListener("click", () => {
     if (chip.classList.contains("muted")) return;
-    const keys = [...found.keys()];
-    if (keys.length) open(keys[keys.length - 1]);
+    chip.classList.remove("new");
+    const keys = noteKeys();
+    const key = lastKey && found.get(lastKey)?.length ? lastKey : keys[keys.length - 1];
+    if (key) open(key);
   });
   host.sheet.addEventListener("click", (ev) => {
     const el = (ev.target as HTMLElement).closest<HTMLElement>(".w.tj");

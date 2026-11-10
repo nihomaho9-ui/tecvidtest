@@ -2293,6 +2293,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   const barWatch = typeof ResizeObserver === "function" ? new ResizeObserver(() => fit()) : null;
   const barEl = root.querySelector<HTMLElement>(".t-bar");
   if (barWatch && barEl) barWatch.observe(barEl);
+  // Warm the card font once so tajwid notes render offline too (the service worker keeps the file).
+  if (document.fonts) void document.fonts.load('24px "TjQuran"', "\u0643").catch(() => undefined);
   // Reciter mp3s are gone: free the storage the old audio cache used.
   if ("caches" in window) void caches.delete("tartil-audio").catch(() => undefined);
   if ("serviceWorker" in navigator) {

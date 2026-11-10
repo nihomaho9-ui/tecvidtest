@@ -16,3 +16,7 @@ The recognizer is [@tilawa/core](https://github.com/yazinsai/tilawa) (MIT code) 
 - `public/tj/*.json` hold measurements of Sheikh Mahmoud Khalil al-Husary's murattal recitation (EveryAyah / quranicaudio.com audio, quran.com word timings), used only as a timing reference for the "Çətin" tajwid check.
 - The madd type per token (`mt`: munfasil / muttasil / lazim) comes from Quran-Lab's `rule_index.jsonl` in [Quran-Lab/mfa-quran-hafs](https://huggingface.co/Quran-Lab/mfa-quran-hafs), Apache-2.0.
 - Thresholds were tuned with [obadx/qdat_bench](https://huggingface.co/datasets/obadx/qdat_bench) (Apache-2.0); the benchmark audio is not shipped.
+
+## Amiri Quran font
+
+`fonts/AmiriQuran-arabic.woff2` (used for Arabic words in the tajwid card) is Amiri Quran, Copyright 2010-2022 The Amiri Project Authors (https://github.com/aliftype/amiri), licensed under the SIL Open Font License 1.1 — see `fonts/OFL-AmiriQuran.txt`.
