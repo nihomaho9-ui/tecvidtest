@@ -144,6 +144,9 @@ export const RULES = {
   long: { tr: 1.4, q: 1.5, tl: -10 }, // natural madd held too long: mid-word only, needs Husary's ratio (page all-site data)
 };
 
+/** Letters the mid-ayah qalqala probe is trusted on (ط had 10 training pairs and 3/10 false flags on a fresh set). */
+export const QMID_LETTERS = "بجدق";
+
 /** Madd type of token i: munfasil (hamza starts the next word), muttasil (same word), lazim (6), or other. */
 export function maddType(at, i, mt) {
   const t = mt?.[i];
@@ -172,7 +175,14 @@ export function judge(m, ref, opt = {}) {
     const next = m.rows[x.i + 1];
     if (x.i === 0 || x.emit < -3 || (prev && prev.emit < -3) || (next && next.emit < -3)) continue;
     if (x.k === "qalqala") {
-      if (!x.final || !opt.qprobe) continue;
+      if (!x.final) {
+        // Mid-ayah sakin qalqala: probe trained on synthetic pairs (release silenced), src/tajwid-qmid.json.
+        if (!opt.qmid || !opt.at || !QMID_LETTERS.includes(opt.at.toks[x.i][0])) continue;
+        const pm = opt.qmid(x.i);
+        if (pm > 0) out.push({ i: x.i, w: x.w, kind: "qalqala", sub: "qalqala-mid", r: x.r, rRef: null, llr: pm });
+        continue;
+      }
+      if (!opt.qprobe) continue;
       // Encoder probe only: the LLR alone flagged 9% of clean ayah ends (33/380, 10 qaris), the probe 0/380.
       const p = opt.qprobe(x.i);
       if (p > 0) out.push({ i: x.i, w: x.w, kind: "qalqala", sub: "qalqala", r: x.r, rRef: null, llr: p });

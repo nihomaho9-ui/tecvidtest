@@ -2,6 +2,7 @@
 // Husary's reference reading of the same page (public/tj/<page>.json, built by tools/tajwid-prep.mjs).
 import { CLASSES, ayahTokens, alignAyah, measure, judge, setEquivalence, errorVariant, siteLLR, tokenClass, qprobeScore, type TjIssue } from "./tajwid-core.js";
 import QPROBE from "./tajwid-qprobe.json";
+import QMID from "./tajwid-qmid.json";
 
 type RefAyah = {
   s: number; a: number; url: string; seg: [number, number, number][]; tj: [number, string, number][]; q: number;
@@ -34,6 +35,7 @@ function explain(x: TjIssue): string {
   if (x.type === "munfasil") return `Məd munfəsil (Şatibiyyə yolu): 4–5 hərəkə uzadılır. ${heard}`;
   if (x.type === "muttasil") return `Məd muttəsil: 4–5 hərəkə uzadılır. ${heard}`;
   if (x.kind === "madd") return `Məd 4–5 hərəkə uzadılmalıdır. ${heard}`;
+  if (x.sub === "qalqala-mid") return "Sakin qəlqələ hərfi: səsi yüngülcə sıçrat (qəlqələ suğra).";
   if (x.kind === "qalqala") return "Ayə sonunda sakin qəlqələ hərfi: səsi aydın sıçrat (qəlqələ kubra).";
   if (x.kind === "ghunna") return "Şəddəli nun/mim: qunnəni 2 hərəkə burunda saxla.";
   return "Nun/mim sakin gizlədilir: səsi ~2 hərəkə burunda saxla.";
@@ -192,7 +194,8 @@ export function createTajwid(host: TajwidHost) {
       return id >= 0 && al ? siteLLR(lp, T, at.ids, al, i, id) : NaN;
     };
     const qprobe = enc && al ? (i: number): number => qprobeScore(enc, T, al.start[i], QPROBE as never) : undefined;
-    const issues = al ? judge(measure(al, at), refAyah, { llr, at, qprobe }) : [];
+    const qmid = enc && al ? (i: number): number => qprobeScore(enc, T, al.start[i], QMID as never) : undefined;
+    const issues = al ? judge(measure(al, at), refAyah, { llr, at, qprobe, qmid }) : [];
     stats.push(performance.now() - t0);
     const words = corpus.surahs[s - 1].ayahs[a - 1].w;
     const list = issues.map((x) => ({ ...x, s, a, text: words[x.w]?.[2] ?? "" }));

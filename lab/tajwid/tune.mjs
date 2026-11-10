@@ -1,7 +1,7 @@
 import fs from 'node:fs'; import { maddType } from './mtype.mjs';
 const QASR = new Set(['jibreel', 'rifai', 'husarymj', 'basfar']);
 const J = f => fs.existsSync(f) ? JSON.parse(fs.readFileSync(f)) : [];
-const clean = J('rows-clean.json'), inj = [...J('rows-injdev.json'), ...J('rows-injtest.json')], Q = J('qdat/feats.json'), HQ = J('qdat/husary-ref.json');
+const clean = [...J('rows-clean.json'), ...J('rows-clean3.json')], inj = [...J('rows-injdev.json'), ...J('rows-injtest.json'), ...J('rows-injdev3.json')], Q = J('qdat/feats.json'), HQ = J('qdat/husary-ref.json');
 const HR = new Map(clean.filter(x => x.rec === 'husary').map(x => [`${x.s}:${x.a}:${x.i}`, x.r]));
 const qsplit = id => (parseInt(id[0], 16) < 8 ? 'dev' : 'test');
 const QL = { 11: ['short', x => +x.separate_madd < 4], 13: ['short', x => +x.noon_moshaddadah_len === 0], 16: ['short', x => +x.noon_mokhfah_len < 2], 26: ['qalq', x => +x.qalqalah === 0], 1: ['long', x => +x.qalo_alif_len >= 3], 3: ['long', x => +x.qalo_waw_len >= 3], 5: ['long', x => +x.laa_alif_len >= 3], 20: ['long', x => +x.allam_alif_len >= 3] };

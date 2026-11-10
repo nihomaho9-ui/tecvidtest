@@ -18,6 +18,7 @@ The "Çətin" level now uses per-rule thresholds that were picked on dev data fo
 | ghunna (noon/meem with shadda) | ratio < 1.9 and LLR(plain noon) > −10 |
 | ikhfa | ratio < 1.2 and LLR(clear noon) > −12 and < 0.72 × Husary's ratio |
 | natural madd held too long (new) | mid-word only; ratio > 1.4 and > 1.5 × Husary's ratio, and LLR(4-count variant) > −10; needs the page's all-site data |
+| qalqala mid-ayah, ب ج د ق only (new) | synthetic-trained encoder probe (`src/tajwid-qmid.json`) score > 0 |
 | qalqala at the ayah end (new) | encoder probe score > 0 (logistic on [mean‖max] of the 512-d encoder rows at token start ±3 frames, `src/tajwid-qprobe.json`, 11 KB) |
 
 All rules also require these gates:
@@ -84,7 +85,6 @@ Limits:
 - Every positive comes from one word, the ب at the end of 5:109 (qdat_bench learners).
 - On synthetic cases (pro audio with the release silenced), the score moves up (median −6.2 → −4.3) but stays under the threshold: 0/190 detected.
 - So for other letters and voices the check stays silent rather than wrong. It needs more labelled learner data.
-- Mid-ayah (sughra) qalqala is not checked.
 
 ## Natural madd held too long (research item 4)
 
@@ -97,3 +97,24 @@ Limits:
 - Detection is low: 11% of all injected long madds (about 26% of mid-word ones), and 0/9 in qdat (all word-final or at the edge).
 - It needs the page's all-site data; prep backfills older pages.
 - Pre-stop trimming was not added: word-final and ayah-final madds are skipped instead.
+
+## Round 3 (strengthening)
+
+### Mid-ayah qalqala (sughra), new
+
+- **Training data:** synthetic pairs, built in `qsynb.mjs`.
+  - The clean sakin qalqala comes from 10 qaris on dev surahs (2:1-41, 85, 89, 96, 111-113).
+  - In the paired copy, 100 ms after the closure is silenced.
+- **Does the synthetic recipe transfer to real learners?** Yes. An ayah-end probe trained only on synthetic pro pairs reaches AUC 0.965 and 81% TPR on the real qdat_bench test learners.
+- **Shipped mid-ayah probe, threshold = max CV dev negative + 1.0:**
+  - Synthetic test (36/67): 53% detected.
+  - Clean false alarms on 36/67: 0/181.
+  - Fresh untouched set, 19:1-40 from 10 qaris: 4/210 with ط included.
+- **ط is excluded:** it had only 10 training pairs, and 3 of the 4 false flags were one ط site. With ط excluded, false alarms are 1/381 on held-out audio (0.26%), so only ب ج د ق are checked.
+- **Limit:** detection is validated on synthetic data only. No open labelled mid-ayah learner data exists; 5:109 in qdat_bench has none.
+
+### Tried, not shipped
+
+- **Session tempo** (median unit over the qari's ayahs) and fusions with the Husary ratio and LLR, for madd and ghunna half-cuts. With 10-qari dev data, the best variants had no better half-cut detection on held-out data than the shipped rules. Some gained half-cut detection only with 6–7% false alarms. The limit is real variation between qaris: a "half" cut lands at about 3 counts, which some reciters use normally.
+- **Ikhfa / ghunna span probes** (encoder, qdat labels): AUC 0.96–0.98, but at cross-validated thresholds they add nothing on top of the rules on the qdat test half (ikhfa 54%, ghunna 67%). A first export with in-sample thresholds looked better but gave 15% ghunna false alarms.
+- **Combined synthetic + qdat ayah-end probe:** worse than the shipped qdat-trained probe.

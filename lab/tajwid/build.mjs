@@ -6,12 +6,14 @@ const ay = (s, a) => corpus.surahs[s - 1].ayahs[a - 1];
 const list = [];
 if (job === 'clean') { for (const f of fs.readdirSync('audio')) { const [r, s, a] = f.slice(0, -4).split('-'); if (+s === 2 && +a <= 41) list.push(['dev', r, +s, +a, 'audio/' + f]); }
   for (const f of fs.readdirSync('audio2')) { const [r, s, a] = f.slice(0, -4).split('-'); list.push(['test', r, +s, +a, 'audio2/' + f]); } }
+if (job === 'clean3') for (const f of fs.readdirSync('audio3')) { if (!f.endsWith('.f32')) continue; const [r, s, a] = f.slice(0, -4).split('-'); list.push(['dev', r, +s, +a, 'audio3/' + f]); }
+if (job === 'injdev3') for (const f of fs.readdirSync('audio3')) { if (!f.endsWith('.f32')) continue; const [r, s, a] = f.slice(0, -4).split('-'); if (['minshawi', 'abdulbasit', 'maher'].includes(r)) list.push(['dev', r, +s, +a, 'audio3/' + f]); }
 if (job === 'injdev') for (let a = 1; a <= 41; a++) list.push(['dev', 'husary', 2, a, `audio/husary-2-${a}.f32`]);
 if (job === 'injtest') for (const r of ['husary', 'minshawi', 'abdulbasit']) { for (let a = 1; a <= 30; a++) list.push(['test', r, 36, a, `audio2/${r}-36-${a}.f32`]); for (let a = 1; a <= 20; a++) list.push(['test', r, 67, a, `audio2/${r}-67-${a}.f32`]); }
 const out = []; let k = 0;
 for (const [set, r, s, a, f] of list) { if (!fs.existsSync(f)) continue; const pcm = rd(f); const key = `${r}-${s}-${a}`;
   const base = await run(pcm, key); const F = clipFeatures(base.lp, base.T, ay(s, a)); if (!F) continue;
-  if (job === 'clean') { for (const x of F.sites) out.push({ ...x, set, rec: r, s, a, y: 0, inj: "clean", unit: F.unit, uo: F.uo, poor: F.poor }); continue; }
+  if (job === 'clean' || job === 'clean3') { for (const x of F.sites) out.push({ ...x, set, rec: r, s, a, y: 0, inj: "clean", unit: F.unit, uo: F.uo, poor: F.poor }); continue; }
   const pk = peakDb(pcm); let m2 = 0;
   for (const x of F.sites) { if (x.final) continue;
     const w0 = x.s0 * FR - L, w1 = x.s1 * FR - L; const st = steady(pcm, w0, w1, pk); if (!st) continue;
