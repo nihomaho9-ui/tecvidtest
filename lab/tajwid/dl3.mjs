@@ -1,0 +1,6 @@
+import fs from 'node:fs'; import {execFileSync} from 'node:child_process';
+const R={abdulbasit:'Abdul_Basit_Murattal_64kbps',shaatree:'Abu_Bakr_Ash-Shaatree_128kbps',rifai:'Hani_Rifai_192kbps',jibreel:'Muhammad_Jibreel_128kbps',ayyoub:'Muhammad_Ayyoub_128kbps',basfar:'Abdullah_Basfar_192kbps',maher:'Maher_AlMuaiqly_64kbps',husary:'Husary_64kbps',minshawi:'Minshawy_Murattal_128kbps',husarymj:'Husary_128kbps_Mujawwad'};
+const A=[];for(const [s,n] of [[85,22],[111,5],[112,4],[113,5],[96,2],[89,5]])for(let a=1;a<=n;a++)A.push([s,a]);
+const jobs=[];for(const [r,f] of Object.entries(R))for(const [s,a] of A){const out=`audio3/${r}-${s}-${a}.f32`;if(!fs.existsSync(out))jobs.push([`https://mirrors.quranicaudio.com/everyayah/${f}/${String(s).padStart(3,'0')}${String(a).padStart(3,'0')}.mp3`,out]);}
+let i=0;async function w(){while(i<jobs.length){const [u,o]=jobs[i++];try{const r=await fetch(u);if(!r.ok)throw new Error(r.status);fs.writeFileSync(o+'.mp3',Buffer.from(await r.arrayBuffer()));execFileSync('ffmpeg',['-loglevel','error','-y','-i',o+'.mp3','-ar','16000','-ac','1','-f','f32le',o]);fs.unlinkSync(o+'.mp3');}catch(e){console.log('fail',u,e.message)}}}
+await Promise.all(Array.from({length:8},w));console.log('done',fs.readdirSync('audio2').length);

@@ -14,7 +14,9 @@ export function alignAyah(lp: Float32Array, T: number, ids: number[], penalty?: 
 export function measure(al: Aligned, at: AyahTok): Measured;
 export const RULES: Record<string, { tr?: number; q?: number; tl?: number }>;
 export function maddType(at: AyahTok, i: number, mt?: Record<string, string>): string;
-export function judge(m: Measured, ref?: RefAyahLike | [number, string, number][] | null, opt?: { llr?: (i: number) => number; at?: AyahTok }): TjIssue[];
+export function judge(m: Measured, ref?: RefAyahLike | [number, string, number][] | null, opt?: { llr?: (i: number) => number; qprobe?: (i: number) => number; at?: AyahTok }): TjIssue[];
 export function setEquivalence(TOKENS: readonly string[]): void;
 export function errorVariant(t: string, k: string): string | undefined;
 export function siteLLR(lp: Float32Array, T: number, ids: number[], al: Aligned, i: number, altId: number | null | undefined, ctx?: number): number;
+export interface QProbe { v: number; win: [number, number]; dim: number; w: number[]; b: number }
+export function qprobeScore(enc: Float32Array, T: number, s: number, probe: QProbe): number;

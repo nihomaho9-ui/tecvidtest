@@ -17,7 +17,7 @@ The "Çətin" level now uses per-rule thresholds that were picked on dev data fo
 | madd lazim | ratio < 2.6 and < 0.72 × Husary's ratio |
 | ghunna (noon/meem with shadda) | ratio < 1.9 and LLR(plain noon) > −10 |
 | ikhfa | ratio < 1.2 and LLR(clear noon) > −12 and < 0.72 × Husary's ratio |
-| qalqala at the ayah end (new) | LLR(no qalqala) > −14, and Husary's own reading there was clear |
+| qalqala at the ayah end (new) | encoder probe score > 0 (logistic on [mean‖max] of the 512-d encoder rows at token start ±3 frames, `src/tajwid-qprobe.json`, 11 KB) |
 
 All rules also require these gates:
 
@@ -49,13 +49,13 @@ dev FA husary                0% 0/28      0% 0/42      0% 0/55      0% 0/55     
 dev FA others                0% 0/56      0% 0/84     0% 0/110     0% 0/110       0% 0/2
 dev inj full               85% 23/27    93% 38/41    48% 26/54    41% 22/54            -
 dev inj half               78% 21/27    90% 37/41    44% 24/54      0% 0/54            -
-dev qdat err(TPR)                  -    83% 20/24    75% 15/20    51% 21/41    48% 13/27
+dev qdat err(TPR)                  -    83% 20/24    75% 15/20    51% 21/41    89% 24/27
 dev qdat ok(FPR)                   -      0% 0/47      0% 0/51      0% 0/30      0% 0/44
 test FA husary               0% 0/10      0% 0/24      0% 0/37      0% 0/49       0% 0/2
 test FA others               1% 1/97     1% 1/108     0% 1/331     1% 5/469      0% 0/18
 test inj full              71% 22/31    86% 50/58   47% 50/107   34% 50/146            -
 test inj half              45% 14/31    47% 27/58   14% 15/107     0% 0/145            -
-test qdat err(TPR)                 -    69% 22/32    67% 14/21    54% 29/54    55% 17/31
+test qdat err(TPR)                 -    69% 22/32    67% 14/21    54% 29/54    68% 21/31
 test qdat ok(FPR)                  -      2% 1/56      1% 1/67      0% 0/34      0% 0/57
 ```
 
@@ -66,3 +66,18 @@ Not enabled, because no setting met the false-alarm target:
 - **Idgham / izhar:** not done.
 
 The model tends to write the rule rather than what was said (Quran-Lab's own warning), so ikhfa stays weak. This matches published results (Muaalem ikhfa F1 0.45).
+
+## Qalqala probe (research item 5)
+
+| | qdat test AUC | qdat test TPR | qdat test FA | clean qaris, ayah-end qalqala (10 qaris, ب د ق ج ط) |
+|---|---|---|---|---|
+| LLR (no-qalqala variant) | 0.87 | 55% | 0% | **33/380 flagged (9%)** → not shipped |
+| encoder probe, training on qdat dev only | 0.99 | 77% | 0/57 | – |
+| encoder probe, shipped judge path (gates + Husary ref) | – | 68% (21/31) | 0/57 | **0/380** |
+
+Limits:
+
+- Every positive comes from one word, the ب at the end of 5:109 (qdat_bench learners).
+- On synthetic cases (pro audio with the release silenced), the score moves up (median −6.2 → −4.3) but stays under the threshold: 0/190 detected.
+- So for other letters and voices the check stays silent rather than wrong. It needs more labelled learner data.
+- Mid-ayah (sughra) qalqala is not checked.

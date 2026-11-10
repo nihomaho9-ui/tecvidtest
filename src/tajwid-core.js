@@ -133,7 +133,7 @@ export const REL = 0.72; // and shorter than this share of Husary's own ratio on
  * held-out reciters (10 qaris, 36:1-30, 67:1-20) and the qdat_bench test half. See docs/TAJWID-PHASE2.md.
  *  - madd: ratio below tr AND below q x Husary's ratio on the same token.
  *  - ghunna / ikhfa: ratio below tr AND the error variant (plain noon / clear noon) is not much less likely (LLR > tl).
- *  - qalqala at the ayah end: the no-qalqala variant is not much less likely (LLR > tl).
+ *  - qalqala at the ayah end: encoder probe (src/tajwid-qprobe.json) score > 0.
  */
 export const RULES = {
   muttasil: { tr: 2.2, q: 0.75 },
@@ -141,7 +141,6 @@ export const RULES = {
   lazim: { tr: 2.6, q: 0.72 },
   ghunna: { tr: 1.9, tl: -10 },
   ikhfa: { tr: 1.2, tl: -12 },
-  qalqala: { tl: -14 },
 };
 
 /** Madd type of token i: munfasil (hamza starts the next word), muttasil (same word), lazim (6), or other. */
@@ -172,11 +171,12 @@ export function judge(m, ref, opt = {}) {
     const next = m.rows[x.i + 1];
     if (x.i === 0 || x.emit < -3 || (prev && prev.emit < -3) || (next && next.emit < -3)) continue;
     if (x.k === "qalqala") {
-      if (!x.final || !opt.llr) continue;
+      if (!x.final || !opt.qprobe) continue;
       const h = allMap.get(x.i);
-      if (h && (!h[3] || !(h[4] <= RULES.qalqala.tl))) continue; // Husary's own qalqala here was not clear
-      const l = opt.llr(x.i);
-      if (l > RULES.qalqala.tl) out.push({ i: x.i, w: x.w, kind: "qalqala", sub: "qalqala", r: x.r, rRef: null, llr: l });
+      if (h && !h[3]) continue; // Husary's own reading here was not clear
+      // Encoder probe only: the LLR alone flagged 9% of clean ayah ends (33/380, 10 qaris), the probe 0/380.
+      const p = opt.qprobe(x.i);
+      if (p > 0) out.push({ i: x.i, w: x.w, kind: "qalqala", sub: "qalqala", r: x.r, rRef: null, llr: p });
       continue;
     }
     if (!KINDS[x.k] || x.final || !(x.r > 0)) continue;
@@ -230,4 +230,20 @@ export function siteLLR(lp, T, ids, al, i, altId, ctx = 3) {
   const e = alignAyah(sub, n, exp, 1.2);
   const x = alignAyah(sub, n, alt, 1.2);
   return e && x ? x.score - e.score : NaN;
+}
+
+/**
+ * Qalqala probe (tilawa slip-head pattern): logistic score on [mean | max] of the 512-d encoder rows around the
+ * qalqala token start. > 0 = the bounce is probably missing. probe = src/tajwid-qprobe.json.
+ */
+export function qprobeScore(enc, T, s, probe) {
+  const D = probe.dim, lo = Math.max(0, s + probe.win[0]), hi = Math.min(T, s + probe.win[1]);
+  if (!(hi > lo)) return NaN;
+  let z = probe.b;
+  for (let d = 0; d < D; d += 1) {
+    let sum = 0, mx = -Infinity;
+    for (let t = lo; t < hi; t += 1) { const v = enc[t * D + d]; sum += v; if (v > mx) mx = v; }
+    z += probe.w[d] * (sum / (hi - lo)) + probe.w[D + d] * mx;
+  }
+  return z;
 }

@@ -1,6 +1,7 @@
 // "Çətin" mode tajwid check: madd, ghunna and ikhfa held too short, judged against the reciter's own tempo and
 // Husary's reference reading of the same page (public/tj/<page>.json, built by tools/tajwid-prep.mjs).
-import { CLASSES, ayahTokens, alignAyah, measure, judge, setEquivalence, errorVariant, siteLLR, tokenClass, type TjIssue } from "./tajwid-core.js";
+import { CLASSES, ayahTokens, alignAyah, measure, judge, setEquivalence, errorVariant, siteLLR, tokenClass, qprobeScore, type TjIssue } from "./tajwid-core.js";
+import QPROBE from "./tajwid-qprobe.json";
 
 type RefAyah = {
   s: number; a: number; url: string; seg: [number, number, number][]; tj: [number, string, number][]; q: number;
@@ -9,7 +10,11 @@ type RefAyah = {
 type RefPage = { p: number; ayahs: RefAyah[] };
 type Core = { encodePhonemes: (t: string) => number[] | null; TOKENS: readonly string[] };
 type Corpus = { surahs: { ayahs: { w: string[][] }[] }[] };
-type Runner = { accept: (frames: Float32Array[]) => Promise<{ logProbs: Float32Array; frames: number }>; __tj?: boolean };
+type Runner = {
+  accept: (frames: Float32Array[]) => Promise<{ logProbs: Float32Array; frames: number; encoder?: Float32Array; encoderFrames?: number }>;
+  __tj?: boolean;
+};
+const ENC = 512;
 export type TjFound = TjIssue & { s: number; a: number; text: string };
 
 const COLOR: Record<string, string> = { madd: "#0e8a7d", ghunna: "#7a4cc8", ikhfa: "#d9731a", qalqala: "#2a6fb0" };
@@ -46,6 +51,8 @@ export function createTajwid(host: TajwidHost) {
   let core: Core | null = null;
   let corpus: Corpus | null = null;
   const ring = new Float32Array(RING * CLASSES);
+  const encRing = new Float32Array(RING * ENC); // encoder rows for the qalqala probe
+  const encOk = new Uint8Array(RING);
   let frames = 0; // decoder frames seen since load (monotonic)
   let lastDrop = -1;
   const starts = new Map<string, number>();
@@ -58,6 +65,7 @@ export function createTajwid(host: TajwidHost) {
   let collapsed = false;
   let noted = 0;
   const stats: number[] = [];
+  let encChecks = 0;
 
   const card = document.createElement("div");
   card.className = "tj-card";
@@ -97,9 +105,12 @@ export function createTajwid(host: TajwidHost) {
     runner.accept = async (fr) => {
       const out = await accept(fr);
       const n = out.frames || 0;
+      const enc = out.encoder && out.encoderFrames === n && out.encoder.length >= n * ENC ? out.encoder : null;
       for (let t = 0; t < n; t += 1) {
         const slot = (frames + t) % RING;
         ring.set(out.logProbs.subarray(t * CLASSES, (t + 1) * CLASSES), slot * CLASSES);
+        encOk[slot] = enc ? 1 : 0;
+        if (enc) encRing.set(enc.subarray(t * ENC, (t + 1) * ENC), slot * ENC);
       }
       frames += n;
       return out;
@@ -149,9 +160,20 @@ export function createTajwid(host: TajwidHost) {
     const at = ayahTokens(corpus.surahs[s - 1].ayahs[a - 1], core.encodePhonemes, core.TOKENS);
     if (!at || T < at.ids.length + 5) return;
     const lp = new Float32Array(T * CLASSES);
+    let encAll = true;
     for (let t = 0; t < T; t += 1) {
       const slot = (begin + t) % RING;
       lp.set(ring.subarray(slot * CLASSES, (slot + 1) * CLASSES), t * CLASSES);
+      if (!encOk[slot]) encAll = false;
+    }
+    let enc: Float32Array | null = null;
+    if (encAll) {
+      encChecks += 1;
+      enc = new Float32Array(T * ENC);
+      for (let t = 0; t < T; t += 1) {
+        const slot = (begin + t) % RING;
+        enc.set(encRing.subarray(slot * ENC, (slot + 1) * ENC), t * ENC);
+      }
     }
     const al = alignAyah(lp, T, at.ids);
     const toks = core.TOKENS;
@@ -160,7 +182,8 @@ export function createTajwid(host: TajwidHost) {
       const id = alt === undefined ? -1 : toks.indexOf(alt);
       return id >= 0 && al ? siteLLR(lp, T, at.ids, al, i, id) : NaN;
     };
-    const issues = al ? judge(measure(al, at), refAyah, { llr, at }) : [];
+    const qprobe = enc && al ? (i: number): number => qprobeScore(enc, T, al.start[i], QPROBE as never) : undefined;
+    const issues = al ? judge(measure(al, at), refAyah, { llr, at, qprobe }) : [];
     stats.push(performance.now() - t0);
     const words = corpus.surahs[s - 1].ayahs[a - 1].w;
     const list = issues.map((x) => ({ ...x, s, a, text: words[x.w]?.[2] ?? "" }));
@@ -170,7 +193,7 @@ export function createTajwid(host: TajwidHost) {
     paint();
     if (list.length) open(key);
     else if (prev?.length && cardKey === key) close();
-    (window as unknown as { __tj?: unknown }).__tj = { stats, found: [...found.values()].flat() };
+    (window as unknown as { __tj?: unknown }).__tj = { stats, encChecks, found: [...found.values()].flat() };
   }
 
   function paint(): void {
