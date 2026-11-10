@@ -43,6 +43,8 @@ export interface TajwidHost {
   asset: (p: string) => string;
   pageOf: (s: number, a: number) => number | undefined;
   retryAyah: (s: number, a: number) => void;
+  hasClip: (s: number, a: number) => boolean;
+  playMine: (s: number, a: number) => void;
 }
 
 export function createTajwid(host: TajwidHost) {
@@ -294,6 +296,14 @@ export function createTajwid(host: TajwidHost) {
     go.className = "pri";
     go.textContent = t("tj.go");
     go.addEventListener("click", () => collapse());
+    if (host.hasClip(s, a)) {
+      const mine = document.createElement("button");
+      mine.type = "button";
+      mine.className = "tj-mine";
+      mine.textContent = t("tj.mine");
+      mine.addEventListener("click", () => host.playMine(s, a));
+      act.append(mine);
+    }
     act.append(again, go);
     const note = document.createElement("div");
     note.className = "tj-dis";

@@ -90,7 +90,7 @@ function clampPage(n: number): number {
 export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () => void {
   const hashMode = opts?.hash === true;
   let words: WordsFile | null = wordsData as WordsFile;
-  // Ayahs per page follow the drawn Madinah layout so recitation, jumps and lessons match what is on screen.
+  // Ayahs per page follow the drawn Madinah layout so recitation and jumps match what is on screen.
   let pages: number[][][] = Array.from({ length: 604 }, (_, i) =>
     (qcfAyahs[String(i + 1)] ?? []).map(([key]) => key.split(":").map(Number)),
   );
@@ -144,10 +144,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         <div class="t-set"><span data-i18n="speed"></span><div class="t-seg" data-set="speed"><button type="button" data-v="orta" aria-pressed="false" data-i18n="speed.orta"></button><button type="button" data-v="tez" aria-pressed="false" data-i18n="speed.tez"></button></div></div>
         <div class="t-set"><span data-i18n="theme"></span><div class="t-seg" data-set="theme"><button type="button" data-v="cream" aria-pressed="false" data-i18n="theme.cream"></button><button type="button" data-v="white" aria-pressed="false" data-i18n="theme.white"></button><button type="button" data-v="black" aria-pressed="false" data-i18n="theme.black"></button></div></div>
         <label class="t-set t-microw" hidden><span data-i18n="mic"></span><select class="t-micpick" data-i18n-aria="mic"></select></label>
-        <div class="t-sheet-sub" data-i18n="practice"></div>
         <div class="t-acts">
-          <button type="button" class="t-act t-lesson"><span class="t-off" data-i18n="lesson"></span><span class="t-onl" data-i18n="lesson.stop"></span></button>
-          <button type="button" class="t-act t-mine" hidden data-i18n="mine"></button>
+          <button type="button" class="t-act t-mine" hidden><span data-i18n="mine"></span> <small class="t-mine-p"></small></button>
           <button type="button" class="t-act t-back" hidden data-i18n="back"></button>
         </div>
         <p class="t-today"></p>
@@ -162,13 +160,6 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       </div>
     </div>
     <div class="t-pnum" aria-live="polite"></div>
-    <div class="t-range" hidden>
-      <b data-i18n="lesson.short"></b>
-      <select class="t-from" data-i18n-aria="range.from"></select>
-      <span>–</span>
-      <select class="t-to" data-i18n-aria="range.to"></select>
-      <button type="button" class="t-ico t-range-go" data-i18n-aria="start"></button>
-    </div>
     <main class="t-page" dir="rtl"></main>
     <p class="t-foot"><span data-i18n="foot"></span></p>
     <div class="t-bar">
@@ -225,6 +216,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     asset,
     pageOf: (s, a) => pageOf.get(`${s}:${a}`),
     retryAyah: (s, a) => void retryTajwid(s, a),
+    hasClip: (s, a) => hasClip(s, a),
+    playMine: (s, a) => void playMine(s, a),
   });
   const micBtn = need<HTMLButtonElement>(".t-mic");
   const st = need<HTMLElement>(".t-st");
@@ -256,7 +249,6 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       closeSheet();
       return;
     }
-    rangeBox.hidden = true;
     root.querySelector(".t-nav")?.setAttribute("hidden", "");
     root.querySelector(".t-surah-btn")?.setAttribute("aria-expanded", "false");
     setSheet.hidden = false;
@@ -279,15 +271,13 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   let sense: "normal" | "sert" | "cetin" = "normal";
   let hifz = false;
   let queueOn = false;
-  let lesson: Array<[number, number]> = [];
-  let lessonAt = 0;
-  let drill = false;
-  let passes = 0;
-  let passDirty = false;
-  const voiceChunks: Float32Array[] = [];
-  let voiceSamples = 0;
-  let captureOn = false;
-  let lastVoice: { s: number; a: number; pcm: Float32Array } | null = null;
+  // The user's own voice: a rolling ring of mic audio, cut into one clip per finished ayah (kept in memory only).
+  const CLIP_RING = 16000 * 90;
+  const micRing = new Float32Array(CLIP_RING);
+  let micPos = 0;
+  let clipMark = 0;
+  const clips = new Map<string, Float32Array>();
+  let lastClip = "";
   let quietStop = false;
   let playGen = 0;
   try {
@@ -393,7 +383,6 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     else misses.push({ s, a, w, kind, n: 1, t: Date.now() });
     if (misses.length > 200) misses = misses.slice(-200);
     takeMisses.push({ s, a, w, kind, n: 1, t: Date.now() });
-    passDirty = true;
     bumpWeek("error");
     saveMisses();
     paintMisses();
@@ -502,7 +491,6 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     const el = root.querySelector(cls);
     if (el && !el.querySelector("svg")) el.insertAdjacentHTML("afterbegin", `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`);
   };
-  icon(".t-range-go", `<path d="M8 5v14l11-7L8 5z"/>`);
   let pace: "tez" | "orta" = "orta";
   try {
     if (localStorage.getItem("tartil.speed") === "tez") pace = "tez";
@@ -628,97 +616,83 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     }
   });
   void listMics();
-  const lessonBtn = need<HTMLButtonElement>(".t-lesson");
   const mineBtn = need<HTMLButtonElement>(".t-mine");
   const backBtn = need<HTMLButtonElement>(".t-back");
-  const rangeBox = need<HTMLElement>(".t-range");
-  const fromSel = need<HTMLSelectElement>(".t-from");
-  const toSel = need<HTMLSelectElement>(".t-to");
-  function pageAyahs(): Array<[number, number]> {
-    const seen = new Set<string>();
-    const out: Array<[number, number]> = [];
-    for (const pair of pages[page - 1] ?? []) {
-      const key = `${pair[0]}:${pair[1]}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push([pair[0], pair[1]]);
-    }
+  function ringSlice(from: number, to: number): Float32Array {
+    const a = Math.max(from, to - CLIP_RING + 1, 0);
+    const out = new Float32Array(Math.max(0, to - a));
+    for (let i = 0; i < out.length; i += 1) out[i] = micRing[(a + i) % CLIP_RING];
     return out;
   }
-  function fillRange(): void {
-    const here = pageAyahs();
-    const surah = here[0]?.[0] || Number(surahSel.value) || 1;
-    const total = words?.ayahs[surah - 1]?.length || 1;
-    const name = surahName(surah);
-    fromSel.setAttribute("aria-label", t("range.fromS", { name }));
-    toSel.setAttribute("aria-label", t("range.toS", { name }));
-    fromSel.replaceChildren();
-    toSel.replaceChildren();
-    for (let a = 1; a <= total; a += 1) {
-      const start = document.createElement("option");
-      start.value = String(a);
-      start.textContent = String(a);
-      fromSel.appendChild(start);
-      const end = document.createElement("option");
-      end.value = String(a);
-      end.textContent = String(a);
-      toSel.appendChild(end);
-    }
-    const onSurah = here.filter((pair) => pair[0] === surah);
-    fromSel.value = String(onSurah[0]?.[1] ?? 1);
-    toSel.value = String(onSurah[onSurah.length - 1]?.[1] ?? total);
-    rangeBox.hidden = false;
+  function paintMine(): void {
+    const bits = lastClip.split(":").map(Number);
+    mineBtn.hidden = !clips.has(lastClip);
+    need<HTMLElement>(".t-mine-p").textContent = bits[0] ? `(${surahName(bits[0])} ${bits[1]})` : "";
   }
-  lessonBtn.addEventListener("click", () => {
-    if (lesson.length) {
-      lesson = [];
-      drill = false;
-      lessonBtn.classList.remove("on");
-      rangeBox.hidden = true;
-      if (micOn) void stopMic();
+  function rmsOf(from: number, to: number): number {
+    let q = 0;
+    let c = 0;
+    for (let i = Math.max(from, micPos - CLIP_RING + 1, 0); i < to; i += 4) {
+      const v = micRing[i % CLIP_RING];
+      q += v * v;
+      c += 1;
+    }
+    return c ? Math.sqrt(q / c) : 0;
+  }
+  // The last word is confirmed while it is still being said, so the clip ends at the pause that follows (or after 4 s).
+  let clipWait: { key: string; start: number; end0: number; ref: number; timer: number } | null = null;
+  function keepClip(key: string, start: number, end: number): void {
+    if (end - start < 8000) return;
+    clips.delete(key);
+    clips.set(key, ringSlice(start, end));
+    while (clips.size > 12) clips.delete(clips.keys().next().value as string);
+    lastClip = key;
+    paintMine();
+  }
+  function settleClip(force: boolean): void {
+    const w = clipWait;
+    if (!w) return;
+    const W = 4000;
+    let quiet = -1;
+    for (let i = Math.max(w.start, w.end0 - W); i + W <= micPos; i += 1600) {
+      if (rmsOf(i, i + W) < w.ref * 0.22) {
+        quiet = i + W / 2;
+        break;
+      }
+    }
+    const limit = w.end0 + 16000 * 4;
+    if (quiet < 0 && !force && micPos < limit) {
+      w.timer = window.setTimeout(() => settleClip(false), 300);
       return;
     }
-    closeSheet();
-    if (!rangeBox.hidden) {
-      rangeBox.hidden = true;
-      return;
-    }
-    fillRange();
-  });
-  need<HTMLButtonElement>(".t-range-go").addEventListener("click", () => {
-    const here = pageAyahs();
-    const surah = here[0]?.[0] || Number(surahSel.value) || 1;
-    let a1 = Number(fromSel.value);
-    let a2 = Number(toSel.value);
-    if (!a1 || !a2) return;
-    if (a2 < a1) {
-      const swap = a1;
-      a1 = a2;
-      a2 = swap;
-    }
-    const list: Array<[number, number]> = [];
-    for (let a = a1; a <= a2; a += 1) list.push([surah, a]);
-    queueOn = false;
-    drill = false;
-    lesson = list;
-    lessonAt = 0;
-    passes = 0;
-    rangeBox.hidden = true;
-    lessonBtn.classList.add("on");
-    void beginRetry({ s: surah, a: a1, w: -1, kind: "ders", n: 1, t: Date.now() });
-  });
-  function snapshotVoice(): void {
-    if (!voiceSamples || !retryKey) return;
-    const [s, a] = retryKey.split(":").map(Number);
-    if (!s || !a) return;
-    const pcm = new Float32Array(voiceSamples);
-    let at = 0;
-    for (const chunk of voiceChunks) {
-      pcm.set(chunk, at);
-      at += chunk.length;
-    }
-    lastVoice = { s, a, pcm };
-    mineBtn.hidden = false;
+    window.clearTimeout(w.timer);
+    clipWait = null;
+    const end = quiet >= 0 ? Math.min(micPos, quiet + 4000) : Math.min(micPos, limit);
+    clipMark = quiet >= 0 ? quiet : end;
+    keepClip(w.key, w.start, end);
+  }
+  function cutClip(s: number, a: number): void {
+    if (clipWait) settleClip(true);
+    const end0 = micPos;
+    const start = Math.max(0, clipMark - 4000, end0 - 16000 * 45);
+    clipMark = end0;
+    clipWait = { key: `${s}:${a}`, start, end0, ref: rmsOf(start, end0), timer: 0 };
+    settleClip(false);
+  }
+  function hasClip(s: number, a: number): boolean {
+    const key = `${s}:${a}`;
+    return clips.has(key) || clipWait?.key === key;
+  }
+  async function playMine(s: number, a: number): Promise<void> {
+    const pcm = clips.get(`${s}:${a}`);
+    if (!pcm) return;
+    quietStop = true;
+    if (micOn || audioStop) await stopMic();
+    quietStop = false;
+    stopClip();
+    setStatus(() => t("st.mine"), () => t("st.mineYou", { p: `${surahName(s)} ${a}` }));
+    const ok = await playPcm(pcm);
+    if (ok) setStatus(() => t("st.read"), () => t("st.mineDone"));
   }
   function playPcm(pcm: Float32Array): Promise<boolean> {
     const gen = playGen;
@@ -750,17 +724,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     });
   }
   mineBtn.addEventListener("click", () => {
-    const clip = lastVoice;
-    if (!clip) return;
-    void (async () => {
-      if (micOn || audioStop) await stopMic();
-      const name = surahName(clip.s);
-      setStatus(() => t("st.mine"), () => t("st.mineQari", { p: `${surahName(clip.s)} ${clip.a}` }));
-      const ok = await playAyah(clip.s, clip.a);
-      if (!ok) return;
-      setStatus(() => t("st.mine"), () => t("st.mineYou", { p: `${surahName(clip.s)} ${clip.a}` }));
-      await playPcm(clip.pcm);
-    })();
+    const bits = lastClip.split(":").map(Number);
+    if (bits[0]) void playMine(bits[0], bits[1]);
   });
   const dayAyahs = new Set<string>();
   function todayStamp(): string {
@@ -1105,7 +1070,6 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     const ahead = n + 1;
     if (ahead <= 604) void loadPageFont(ahead).catch(() => undefined);
     if (n > 1) void loadPageFont(n - 1).catch(() => undefined);
-    prefetchPage(n);
   }
 
   function clearTimers(): void {
@@ -1258,6 +1222,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         tj.ayahDone(surah, ayah);
         if (surah === seqS && ayah === seqA) seqDone = true;
         noteAyah(surah, ayah);
+        cutClip(surah, ayah);
         shown.add(`num:${surah}:${ayah}`);
         const prefix = `${surah}:${ayah}:`;
         sheet.querySelectorAll<HTMLElement>(".w").forEach((el) => {
@@ -1297,46 +1262,6 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       retryKey = "";
       paintMisses();
       applyShown();
-      if (lesson.length || drill) {
-        const name = surahName(bits[0]);
-        const again = (why: string) => {
-          retryKey = `${bits[0]}:${bits[1]}:*`;
-          setStatus(why, `${surahName(bits[0])} ${bits[1]} — ${passes}/3`);
-          void beginRetry({ s: bits[0], a: bits[1], w: -1, kind: "ders", n: 1, t: Date.now() });
-        };
-        if (passDirty) {
-          passDirty = false;
-          again(t("st.again"));
-          return;
-        }
-        passes += 1;
-        if (passes < 3) {
-          again(t("st.clean"));
-          return;
-        }
-        passes = 0;
-        passDirty = false;
-        if (lesson.length) {
-          lessonAt += 1;
-          if (lessonAt < lesson.length) {
-            const next = lesson[lessonAt];
-            void beginRetry({ s: next[0], a: next[1], w: -1, kind: "ders", n: 1, t: Date.now() });
-            return;
-          }
-          lesson = [];
-          lessonAt = 0;
-          root.querySelector(".t-lesson")?.classList.remove("on");
-          setStatus(() => t("st.done"), () => t("st.lessonDone"));
-        } else {
-          drill = false;
-          setStatus(() => t("st.done"), () => t("st.drillDone", { p: `${surahName(bits[0])} ${bits[1]}` }));
-        }
-        retryClose = true;
-        queueMicrotask(() => {
-          if (micOn) void stopMic();
-        });
-        return;
-      }
       if (queueOn) {
         advanceQueue();
         return;
@@ -1779,33 +1704,6 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   let voice: AudioContext | null = null;
   let voiceStop: (() => void) | null = null;
 
-  function ayahUrl(surah: number, ayah: number): string {
-    const file = `${String(surah).padStart(3, "0")}${String(ayah).padStart(3, "0")}.mp3`;
-    return `https://verses.quran.com/Alafasy/mp3/${file}`;
-  }
-
-  async function loadAyah(url: string): Promise<ArrayBuffer | null> {
-    const cache = "caches" in window ? await caches.open("tartil-audio") : null;
-    let hit = cache ? await cache.match(url) : undefined;
-    if (!hit) {
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      if (cache) await cache.put(url, res.clone());
-      hit = res;
-    }
-    return hit.arrayBuffer();
-  }
-
-  function prefetchPage(n: number): void {
-    const seen = new Set<string>();
-    for (const pair of pages[n - 1] ?? []) {
-      const key = `${pair[0]}:${pair[1]}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      void loadAyah(ayahUrl(pair[0], pair[1])).catch(() => undefined);
-    }
-  }
-
   function stopClip(): void {
     playGen += 1;
     try {
@@ -1814,47 +1712,6 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       /* already stopped */
     }
     voiceStop = null;
-  }
-
-  function playAyah(surah: number, ayah: number): Promise<boolean> {
-    stopClip();
-    const gen = playGen;
-    const url = ayahUrl(surah, ayah);
-    const name = surahName(surah);
-    const step = (lesson.length || drill) && passes > 0 ? t("st.step", { n: passes }) : "";
-    setStatus(() => t("st.listen"), () => t("st.listenSub", { p: `${surahName(surah)} ${ayah}`, step }));
-    return new Promise((resolve) => {
-      const finish = (ok: boolean) => resolve(gen === playGen && ok);
-      void (async () => {
-        try {
-          const raw = await loadAyah(url);
-          if (!raw || gen !== playGen) {
-            finish(false);
-            return;
-          }
-          const ctx = voice ?? new AudioContext();
-          voice = ctx;
-          await ctx.resume();
-          const buf = await ctx.decodeAudioData(raw.slice(0));
-          if (gen !== playGen) {
-            finish(false);
-            return;
-          }
-          const src = ctx.createBufferSource();
-          const gain = ctx.createGain();
-          gain.gain.value = 1.45;
-          src.buffer = buf;
-          src.connect(gain);
-          gain.connect(ctx.destination);
-          src.playbackRate.value = 0.75;
-          voiceStop = () => src.stop();
-          src.onended = () => finish(true);
-          src.start();
-        } catch {
-          finish(true);
-        }
-      })();
-    });
   }
 
   async function retryTajwid(s: number, a: number): Promise<void> {
@@ -1882,9 +1739,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (micOn || audioStop) await stopMic();
     quietStop = false;
     queueOn = keepQueue;
-    passDirty = false;
-    const ok = await playAyah(m.s, m.a);
-    if (!ok || !alive) return;
+    stopClip();
+    if (!alive) return;
     retryKey = m.w >= 0 ? `${m.s}:${m.a}:${m.w}` : `${m.s}:${m.a}:*`;
     missBox.hidden = true;
     missBtn.setAttribute("aria-expanded", "false");
@@ -1928,6 +1784,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   async function startMic(): Promise<void> {
     if (opening || micOn) return;
     opening = true;
+    stopClip();
     try {
     await settlingMic;
     if (micOn) return;
@@ -1966,9 +1823,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     seqA = 0;
     seqDone = false;
     seqHold = false;
-    voiceChunks.length = 0;
-    voiceSamples = 0;
-    captureOn = true;
+    clipMark = micPos;
     calUntil = 0;
     calSum = 0;
     calN = 0;
@@ -2074,10 +1929,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     };
     const pushPcm = (next: Float32Array) => {
       if (!micOn || !next.length) return;
-      if (captureOn && voiceSamples < 16000 * 25) {
-        voiceChunks.push(next.slice());
-        voiceSamples += next.length;
-      }
+      for (let i = 0; i < next.length; i += 1) micRing[(micPos + i) % CLIP_RING] = next[i];
+      micPos += next.length;
       if (pending.length > chunkSize * 2) {
         tj.dropped();
         pending = pending.slice(pending.length - chunkSize * 2);
@@ -2187,6 +2040,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
 
   async function stopMic(): Promise<void> {
+    settleClip(true);
     stopClip();
     if (!micOn && !audioStop) return;
     micOn = false;
@@ -2200,8 +2054,6 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     freshKey = "";
     expectedSurah = 0;
     const fixed = retryClose;
-    snapshotVoice();
-    captureOn = false;
     retryClose = false;
     retryKey = "";
     ayahLock = "";
@@ -2216,11 +2068,6 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     void wake?.release();
     wake = null;
     if (!quietStop) {
-      lesson = [];
-      lessonAt = 0;
-      drill = false;
-      passes = 0;
-      root.querySelector(".t-lesson")?.classList.remove("on");
       if (nHeard || found.length) showSummary(fixed, nHeard, found);
       else setStatus(() => t("st.read"), () => t("st.micOff"));
     }
@@ -2405,6 +2252,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     langSel.appendChild(opt);
   }
   function refreshLang(): void {
+    paintMine();
     const lang = getLang();
     langSel.value = lang;
     document.documentElement.lang = lang;
@@ -2438,6 +2286,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   const barWatch = typeof ResizeObserver === "function" ? new ResizeObserver(() => fit()) : null;
   const barEl = root.querySelector<HTMLElement>(".t-bar");
   if (barWatch && barEl) barWatch.observe(barEl);
+  // Reciter mp3s are gone: free the storage the old audio cache used.
+  if ("caches" in window) void caches.delete("tartil-audio").catch(() => undefined);
   if ("serviceWorker" in navigator) {
     const sw = asset("sw.js");
     void navigator.serviceWorker.register(sw).catch(() => undefined);
