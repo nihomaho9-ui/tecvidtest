@@ -1,6 +1,6 @@
 {
-  "name": "Təcvid test",
-  "short_name": "Təcvid",
+  "name": "Quran Tasheeh",
+  "short_name": "Quran Tasheeh",
   "description": "Quranı öz telefonunda, mikrofonla izləyərək oxu.",
   "start_url": "./",
   "scope": "./",

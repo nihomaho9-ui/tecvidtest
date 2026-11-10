@@ -125,15 +125,9 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   root.className = "tartil";
   root.innerHTML = `
     <header class="t-top">
-      <div class="t-pager">
-        <button type="button" data-dir="-1" data-i18n-aria="nav.prev">‹</button>
-        <input class="t-pageno" inputmode="numeric" data-i18n-aria="nav.page" />
-        <button type="button" data-dir="1" data-i18n-aria="nav.next">›</button>
-      </div>
-      <label class="t-ico t-surah-btn" data-i18n-aria="nav.surah">
+      <button type="button" class="t-ico t-surah-btn" aria-haspopup="dialog" aria-expanded="false" data-i18n-aria="nav.title" data-i18n-title="nav.title">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4z"/><path d="M5 4a3 3 0 0 0-3 3v13"/></svg>
-        <select class="t-surah" data-i18n-aria="nav.surah"></select>
-      </label>
+      </button>
       <button type="button" class="t-missbtn" aria-expanded="false" data-i18n-aria="miss.btn">0</button>
       <button type="button" class="t-more" aria-expanded="false" aria-haspopup="dialog" data-i18n-title="set.title">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -157,8 +151,17 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
           <button type="button" class="t-act t-back" hidden data-i18n="back"></button>
         </div>
         <p class="t-today"></p>
+        <p class="t-about"><b>Quran Tasheeh</b> · <span data-i18n="foot"></span></p>
       </div>
     </div>
+    <div class="t-sheet t-nav" hidden>
+      <div class="t-sheet-box" role="dialog" aria-modal="true" data-i18n-aria="nav.title">
+        <div class="t-sheet-h"><b data-i18n="nav.title"></b><button type="button" class="t-sheet-x t-nav-x" data-i18n="close"></button></div>
+        <label class="t-set"><span data-i18n="nav.surah"></span><select class="t-surah" data-i18n-aria="nav.surah"></select></label>
+        <form class="t-set t-goform"><span data-i18n="nav.page"></span><span class="t-go"><input class="t-pageno" type="number" min="1" max="604" inputmode="numeric" enterkeyhint="go" data-i18n-aria="nav.page" /><button type="submit" class="t-gobtn" data-i18n="nav.go"></button></span></form>
+      </div>
+    </div>
+    <div class="t-pnum" aria-live="polite"></div>
     <div class="t-range" hidden>
       <b data-i18n="lesson.short"></b>
       <select class="t-from" data-i18n-aria="range.from"></select>
@@ -208,6 +211,12 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   applyI18n(root);
   const surahSel = need<HTMLSelectElement>(".t-surah");
   const pageInput = need<HTMLInputElement>(".t-pageno");
+  const pnumEl = need<HTMLElement>(".t-pnum");
+  // Page number as plain text under the page, like a printed mushaf (Arabic-Indic digits for the Arabic UI).
+  function paintPageNo(): void {
+    const n = Number(pageInput.value) || 0;
+    pnumEl.textContent = n ? (isRtl() ? n.toLocaleString("ar-EG", { useGrouping: false }) : String(n)) : "";
+  }
   const pageEl = need<HTMLElement>(".t-page");
   const sheet = pageEl;
   const tj = createTajwid({
@@ -248,6 +257,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       return;
     }
     rangeBox.hidden = true;
+    root.querySelector(".t-nav")?.setAttribute("hidden", "");
+    root.querySelector(".t-surah-btn")?.setAttribute("aria-expanded", "false");
     setSheet.hidden = false;
     moreBtn.setAttribute("aria-expanded", "true");
     moreBtn.classList.add("on");
@@ -896,7 +907,9 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     const bar = root.querySelector<HTMLElement>(".t-bar");
     const barH = bar ? Math.ceil(bar.getBoundingClientRect().height) : 0;
     root.style.setProperty("--t-bar-h", `${barH}px`);
-    const h = Math.max(160, pageEl.clientHeight - barH - 21);
+    const pnH = Math.ceil(pnumEl.getBoundingClientRect().height) || 18;
+    root.style.setProperty("--t-pn-h", `${pnH}px`);
+    const h = Math.max(160, pageEl.clientHeight - barH - pnH - 21);
     const w = pageEl.clientWidth - 12;
     if (!h || !w) return;
     let size = land ? w / 12 : h / 15;
@@ -910,7 +923,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       size *= (w / widest) * 0.94;
     }
     const phone = matchMedia("(max-width: 520px)").matches;
-    const rowH = (pageEl.clientHeight - barH) / 15;
+    const rowH = (pageEl.clientHeight - barH - pnH) / 15;
     if (land) {
       pageEl.style.fontSize = `${size}px`;
       root.style.setProperty("--t-row", `${(size / 0.62).toFixed(2)}px`);
@@ -1077,6 +1090,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (retryKey) markRetry();
     paintMisses();
     pageInput.value = String(n);
+    paintPageNo();
     const first = pages[n - 1]?.[0];
     const keepPick = pickedSurah > 0 && surahPage.get(pickedSurah) === n;
     pickedSurah = 0;
@@ -2245,18 +2259,39 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       });
   });
 
-  root.querySelectorAll<HTMLButtonElement>("[data-dir]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const dir = Number(btn.dataset.dir || 0);
-      go(page + dir);
-    });
+  // Surah / page sheet (the header has no page box or arrows; pages turn by swipe or the arrow keys).
+  const navSheet = need<HTMLElement>(".t-nav");
+  const navBtn = need<HTMLButtonElement>(".t-surah-btn");
+  function closeNav(): void {
+    if (navSheet.hidden) return;
+    navSheet.hidden = true;
+    navBtn.setAttribute("aria-expanded", "false");
+  }
+  navBtn.addEventListener("click", () => {
+    if (!navSheet.hidden) {
+      closeNav();
+      return;
+    }
+    closeSheet();
+    pageInput.value = String(page);
+    navSheet.hidden = false;
+    navBtn.setAttribute("aria-expanded", "true");
   });
-  pageInput.addEventListener("change", () => {
+  navSheet.addEventListener("click", (e) => {
+    const tg = e.target as HTMLElement;
+    if (tg === navSheet || tg.closest(".t-nav-x")) closeNav();
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeNav();
+  });
+  need<HTMLFormElement>(".t-goform").addEventListener("submit", (e) => {
+    e.preventDefault();
     const n = Number(pageInput.value.trim());
     if (!pageInput.value.trim() || !Number.isFinite(n)) {
       pageInput.value = String(page);
       return;
     }
+    closeNav();
     go(n);
   });
   surahSel.addEventListener("change", () => {
@@ -2264,25 +2299,36 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     const target = surahPage.get(n);
     if (target) {
       pickedSurah = n;
+      closeNav();
       go(target);
     }
   });
 
+  // Swipe turns the page like a printed mushaf: the next page lies to the left, so a swipe to the right goes
+  // forward. Only a clear one-finger horizontal swipe counts (vertical scroll and pinch are left alone).
   let sx = 0;
   let sy = 0;
+  let st0 = 0;
+  let multi = false;
   pageEl.addEventListener("touchstart", (ev) => {
+    multi = ev.touches.length > 1;
     const t = ev.changedTouches[0];
-    if (!t) return;
+    if (!t || multi) return;
     sx = t.clientX;
     sy = t.clientY;
+    st0 = performance.now();
+  }, { passive: true });
+  pageEl.addEventListener("touchmove", (ev) => {
+    if (ev.touches.length > 1) multi = true;
   }, { passive: true });
   pageEl.addEventListener("touchend", (ev) => {
     const t = ev.changedTouches[0];
-    if (!t) return;
+    if (!t || multi || ev.touches.length) return;
     const dx = t.clientX - sx;
     const dy = t.clientY - sy;
-    if (Math.abs(dx) < 72 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    go(page + (dx < 0 ? 1 : -1));
+    if (performance.now() - st0 > 900) return;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    go(page + (dx > 0 ? 1 : -1));
   }, { passive: true });
 
   window.addEventListener("keydown", onKey);
@@ -2296,6 +2342,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
   window.addEventListener("hashchange", onHash);
   function onKey(ev: KeyboardEvent): void {
+    const tg = ev.target as HTMLElement | null;
+    if (tg && (tg.tagName === "INPUT" || tg.tagName === "SELECT" || tg.tagName === "TEXTAREA")) return;
     if (ev.key === "ArrowLeft") go(page + 1);
     if (ev.key === "ArrowRight") go(page - 1);
   }
@@ -2374,6 +2422,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     paintToday();
     if (micPick.options[0] && !micPick.options[0].value) micPick.options[0].textContent = t("mic");
     tj.relabel();
+    paintPageNo();
     redrawStatus();
   }
   langSel.addEventListener("change", () => {

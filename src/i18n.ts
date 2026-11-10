@@ -12,6 +12,8 @@ const IDX: Record<Lang, number> = { az: 0, tr: 1, en: 2, ar: 3, ru: 4 };
 const D = {
   "nav.prev": ["Əvvəlki səhifə", "Önceki sayfa", "Previous page", "الصفحة السابقة", "Предыдущая страница"],
   "nav.next": ["Növbəti səhifə", "Sonraki sayfa", "Next page", "الصفحة التالية", "Следующая страница"],
+  "nav.title": ["Surə və səhifə", "Sure ve sayfa", "Surah and page", "السورة والصفحة", "Сура и страница"],
+  "nav.go": ["Keç", "Git", "Go", "انتقال", "Перейти"],
   "nav.page": ["Səhifə", "Sayfa", "Page", "الصفحة", "Страница"],
   "nav.surah": ["Surə", "Sure", "Surah", "السورة", "Сура"],
   "miss.btn": ["Xətalar", "Hatalar", "Mistakes", "الأخطاء", "Ошибки"],

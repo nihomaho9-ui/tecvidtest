@@ -96,7 +96,6 @@ body { margin: 0; }
   border-bottom: 1px solid var(--line);
   direction: rtl;
 }
-.t-surah-btn .t-surah,
 .t-micbtn .t-micpick {
   position: absolute;
   inset: 0;
@@ -126,30 +125,8 @@ body { margin: 0; }
   padding: 0 8px;
 }
 
-.t-pager {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
 
-.t-pager button {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--chip);
-  cursor: pointer;
-}
 
-.t-pager input {
-  width: 44px;
-  height: 32px;
-  text-align: center;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--chip);
-  font-variant-numeric: tabular-nums;
-}
 
 .t-page {
   flex: 1;
@@ -159,7 +136,7 @@ body { margin: 0; }
   background: var(--paper);
   color: var(--ink);
   border: 0;
-  padding: 0 4px var(--t-bar-h, calc(88px + env(safe-area-inset-bottom)));
+  padding: 0 4px calc(var(--t-bar-h, calc(88px + env(safe-area-inset-bottom))) + var(--t-pn-h, 18px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -491,3 +468,29 @@ body { margin: 0; }
 .tartil.ui-rtl .t-sheet-sub { letter-spacing: 0; }
 .t-lang { flex: none; height: 32px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip); padding: 0 10px; }
 .t-seg button { max-width: 9.5em; overflow: hidden; text-overflow: ellipsis; }
+
+/* Header: settings, mistakes and the surah/page picker only. */
+.t-top .t-more { margin-inline-start: auto; }
+/* Page number: plain small digits under the page, above the mic bar (like a printed mushaf). */
+.t-pnum {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--t-bar-h, 80px);
+  z-index: 4;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  font: 12.5px/18px "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  color: var(--muted);
+  background: var(--paper);
+  pointer-events: none;
+  direction: ltr;
+}
+.t-goform { margin: 0; }
+.t-go { display: inline-flex; gap: 6px; align-items: center; }
+.t-go input { width: 5.5em; height: 32px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip); padding: 0 10px; text-align: center; }
+.t-go button { height: 32px; border: 0; border-radius: 999px; background: var(--ink); color: var(--paper); padding: 0 14px; font-weight: 600; cursor: pointer; }
+.t-nav select.t-surah { flex: 0 1 auto; max-width: 62%; height: 32px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip); padding: 0 10px; }
+.t-about { margin: 8px 0 0; font-size: 11.5px; color: var(--muted); }
+.t-about b { color: var(--ink); font-weight: 700; }
