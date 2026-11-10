@@ -1,6 +1,6 @@
 // "Çətin" mode tajwid check: madd, ghunna and ikhfa held too short, judged against the reciter's own tempo and
 // Husary's reference reading of the same page (public/tj/<page>.json, built by tools/tajwid-prep.mjs).
-import { CLASSES, ayahTokens, alignAyah, measure, judge, setEquivalence, errorVariant, siteLLR, tokenClass, qprobeScore, type TjIssue } from "./tajwid-core.js";
+import { CLASSES, ayahTokens, alignAyah, measure, judge, setEquivalence, errorVariant, siteLLR, tokenClass, qprobeScore, findStops, WAQF, type TjIssue } from "./tajwid-core.js";
 import QPROBE from "./tajwid-qprobe.json";
 import QMID from "./tajwid-qmid.json";
 import { t } from "./i18n";
@@ -14,17 +14,32 @@ type Core = { encodePhonemes: (t: string) => number[] | null; TOKENS: readonly s
 type Corpus = { surahs: { ayahs: { w: string[][] }[] }[] };
 type Runner = {
   accept: (frames: Float32Array[]) => Promise<{ logProbs: Float32Array; frames: number; encoder?: Float32Array; encoderFrames?: number }>;
+  reset?: () => void;
   __tj?: boolean;
 };
+// Wrong-stop (waqf) note: the stop word and whether the reader went back (soft) or carried on.
+type WaqfIssue = { i: number; w: number; kind: "waqf"; sub: "waqf" | "waqf-soft"; type?: string; r: number; rRef: null };
+type Note = TjIssue | WaqfIssue;
 const ENC = 512;
-export type TjFound = TjIssue & { s: number; a: number; text: string };
+export type TjFound = Note & { s: number; a: number; text: string };
 
-const COLOR: Record<string, string> = { madd: "#0e8a7d", ghunna: "#7a4cc8", ikhfa: "#d9731a", qalqala: "#2a6fb0" };
+const COLOR: Record<string, string> = { madd: "#0e8a7d", ghunna: "#7a4cc8", ikhfa: "#d9731a", qalqala: "#2a6fb0", waqf: "#c0392b" };
 const LABEL = (kind: string): string =>
-  t(kind === "ghunna" ? "tj.label.ghunna" : kind === "ikhfa" ? "tj.label.ikhfa" : kind === "qalqala" ? "tj.label.qalqala" : "tj.label.madd");
+  t(
+    kind === "waqf"
+      ? "tj.label.waqf"
+      : kind === "ghunna"
+        ? "tj.label.ghunna"
+        : kind === "ikhfa"
+          ? "tj.label.ikhfa"
+          : kind === "qalqala"
+            ? "tj.label.qalqala"
+            : "tj.label.madd",
+  );
 const RING = 25 * 240; // 4 minutes of decoder frames
 
-function explain(x: TjIssue): string {
+function explain(x: Note): string {
+  if (x.kind === "waqf") return t(x.sub === "waqf-soft" ? "tj.waqfSoft" : "tj.waqf");
   const h = t(x.r < 1.35 ? "tj.heard2" : "tj.heardShort");
   if (x.type === "long") return t("tj.long");
   if (x.sub === "madd6") return t("tj.lazim", { h });
@@ -55,6 +70,9 @@ export function createTajwid(host: TajwidHost) {
   const ring = new Float32Array(RING * CLASSES);
   const encRing = new Float32Array(RING * ENC); // encoder rows for the qalqala probe
   const encOk = new Uint8Array(RING);
+  const loudRing = new Float32Array(RING); // per decoder frame: loudest fbank frame (mean log-mel) of its 4
+  let fbPend: number[] = []; // fbank loudness not yet paired with a decoder frame (since the runner's last reset)
+  let waqf: Promise<string[][] | null> | null = null; // allowed-stop table: t[s-1][a-1] = "7j,15s"
   let frames = 0; // decoder frames seen since load (monotonic)
   let lastDrop = -1;
   const starts = new Map<string, number>();
@@ -68,6 +86,7 @@ export function createTajwid(host: TajwidHost) {
   let lastKey = "";
   let noted = 0;
   const stats: number[] = [];
+  const wq: unknown[] = []; // wrong-stop debug (window.__tj.wq)
   let encChecks = 0;
   const skips: Record<string, number> = {};
   const skip = (k: string): void => {
@@ -92,6 +111,13 @@ export function createTajwid(host: TajwidHost) {
       .catch(() => new Set<number>());
     return index;
   }
+  function waqfTable(): Promise<string[][] | null> {
+    waqf ??= fetch(host.asset("tj/waqf.json"))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { t?: string[][] } | null) => j?.t ?? null)
+      .catch(() => null);
+    return waqf;
+  }
   function refPage(p: number): Promise<RefPage | null> {
     let hit = pageCache.get(p);
     if (!hit) {
@@ -111,7 +137,19 @@ export function createTajwid(host: TajwidHost) {
     if (!runner || runner.__tj) return;
     runner.__tj = true;
     const accept = runner.accept.bind(runner);
+    if (runner.reset) {
+      const reset = runner.reset.bind(runner);
+      runner.reset = () => {
+        fbPend = [];
+        reset();
+      };
+    }
     runner.accept = async (fr) => {
+      for (const f of fr) {
+        let sum = 0;
+        for (let i = 0; i < f.length; i += 1) sum += f[i];
+        fbPend.push(f.length ? sum / f.length : -Infinity);
+      }
       const out = await accept(fr);
       const n = out.frames || 0;
       const enc = out.encoder && out.encoderFrames === n && out.encoder.length >= n * ENC ? out.encoder : null;
@@ -120,6 +158,9 @@ export function createTajwid(host: TajwidHost) {
         ring.set(out.logProbs.subarray(t * CLASSES, (t + 1) * CLASSES), slot * CLASSES);
         encOk[slot] = enc ? 1 : 0;
         if (enc) encRing.set(enc.subarray(t * ENC, (t + 1) * ENC), slot * ENC);
+        let m = -Infinity; // decoder frame t covers fbank frames 4t..4t+3
+        for (const v of fbPend.splice(0, 4)) if (v > m) m = v;
+        loudRing[slot] = m;
       }
       frames += n;
       return out;
@@ -194,7 +235,25 @@ export function createTajwid(host: TajwidHost) {
     };
     const qprobe = enc && al ? (i: number): number => qprobeScore(enc, T, al.start[i], QPROBE as never) : undefined;
     const qmid = enc && al ? (i: number): number => qprobeScore(enc, T, al.start[i], QMID as never) : undefined;
-    const issues = al ? judge(measure(al, at), refAyah, { llr, at, qprobe, qmid, munfasil }) : [];
+    const issues: Note[] = al ? judge(measure(al, at), refAyah, { llr, at, qprobe, qmid, munfasil }) : [];
+    const table = al ? await waqfTable() : null;
+    if (al && table) {
+      // wrong stop: a pause mid-ayah where no waqf mark (or Husary's own pause) allows one
+      const marks: Record<number, string> = {};
+      for (const x of (table[s - 1]?.[a - 1] || "").split(",")) {
+        const m = /^(\d+)(\D+)$/.exec(x);
+        if (m) marks[+m[1]] = m[2];
+      }
+      const loud = new Float32Array(T);
+      for (let t = 0; t < T; t += 1) loud[t] = loudRing[(begin + t) % RING];
+      const dbg: unknown[] = [];
+      const stops = findStops(lp, T, loud, at, al, marks, { ...WAQF, debug: dbg } as typeof WAQF);
+      wq.push({ key, T, from: al.from, to: al.to, stops, d: dbg[0] ?? null });
+      if (wq.length > 40) wq.shift();
+      for (const x of stops)
+        issues.push({ i: -1, w: x.w, kind: "waqf", sub: x.soft ? "waqf-soft" : "waqf", type: "waqf", r: 1, rRef: null });
+      issues.sort((x, y) => x.w - y.w);
+    }
     stats.push(performance.now() - t0);
     const words = corpus.surahs[s - 1].ayahs[a - 1].w;
     const list = issues.map((x) => ({ ...x, s, a, text: words[x.w]?.[2] ?? "" }));
@@ -210,7 +269,7 @@ export function createTajwid(host: TajwidHost) {
         else head();
       } else pulse();
     } else if (prev?.length && cardKey === key) close();
-    (window as unknown as { __tj?: unknown }).__tj = { stats, encChecks, skips, found: [...found.values()].flat() };
+    (window as unknown as { __tj?: unknown }).__tj = { stats, encChecks, skips, wq, found: [...found.values()].flat() };
   }
 
   function paint(): void {
@@ -329,7 +388,7 @@ export function createTajwid(host: TajwidHost) {
       const mid = document.createElement("div");
       mid.className = "tj-mid";
       const b = document.createElement("b");
-      b.textContent = x.type === "long" ? t("tj.label.long") : LABEL(x.kind);
+      b.textContent = x.type === "long" ? t("tj.label.long") : x.sub === "waqf-soft" ? t("tj.label.waqfSoft") : LABEL(x.kind);
       const d = document.createElement("div");
       d.textContent = explain(x);
       mid.append(b, d);
@@ -432,7 +491,9 @@ export function createTajwid(host: TajwidHost) {
       chip.hidden = true;
     },
     prefetch(p: number) {
-      if (on) void refPage(p);
+      if (!on) return;
+      void refPage(p);
+      void waqfTable();
     },
   };
 }
