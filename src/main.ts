@@ -1,9 +1,4 @@
 import "./tartil.css";
-import wordsData from "./data/words.json";
-import pagesData from "./data/pages.json";
-import qcfPagesData from "./data/qcf-pages.json";
-import qcfWordsData from "./data/qcf-words.json";
-import qcfAyahsData from "./data/qcf-ayahs.json";
 import { createTajwid } from "./tajwid";
 import { LANGS, applyI18n, getLang, isRtl, onLang, setLang, surahName, t, type Lang } from "./i18n";
 
@@ -11,8 +6,8 @@ let delayMin = 400;
 let delayStep = 30;
 let delayCap = 120;
 
-type WordsFile = { names: string[]; ayahs: string[][][] };
-type PagesFile = { pages: number[][][] };
+type PageFile = { lines: string[]; wlens: number[][]; runs: [string, number][]; prev14: boolean };
+type IndexFile = { v: number; pages: number[][][]; ayahs: number[]; words: number[][] };
 type FeedSession = {
   feed: (pcm: Float32Array) => Promise<unknown>;
   stop: () => Promise<unknown>;
@@ -52,12 +47,6 @@ const BISM = "\uFC41\uFC42\uFC43\uFC44";
 const STARTS =
   "1:1:2,2:2:3,3:50:3,4:77:2,5:106:8,6:128:3,7:151:3,8:177:3,9:187:2,10:208:2,11:221:9,12:235:11,13:249:3,14:255:5,15:262:3,16:267:9,17:282:3,18:293:12,19:305:3,20:312:7,21:322:3,22:332:2,23:342:2,24:350:2,25:359:13,26:367:2,27:377:2,28:385:10,29:396:10,30:404:12,31:411:3,32:415:2,33:418:2,34:428:3,35:434:10,36:440:6,37:446:2,38:453:2,39:458:6,40:467:5,41:477:3,42:483:3,43:489:7,44:496:3,45:499:2,46:502:9,47:507:2,48:511:3,49:515:9,50:518:3,51:520:14,52:523:10,53:526:2,54:528:12,55:531:7,56:534:9,57:537:13,58:542:3,59:545:9,60:549:2,61:551:9,62:553:3,63:554:9,64:556:2,65:558:2,66:560:3,67:562:3,68:564:8,69:566:12,70:568:11,71:570:7,72:572:3,73:574:3,74:575:10,75:577:8,76:578:12,77:580:9,78:582:3,79:583:10,80:585:2,81:586:4,82:587:3,83:587:14,84:589:5,85:590:4,86:591:3,87:591:12,88:592:7,89:593:5,90:594:8,91:595:4,92:595:13,93:596:8,94:596:15,95:597:5,96:597:11,97:598:6,98:598:11,99:599:8,100:599:14,101:600:6,102:600:13,103:601:3,104:601:7,105:601:13,106:602:3,107:602:8,108:602:14,109:603:3,110:603:8,111:603:13,112:604:3,113:604:7,114:604:12";
 
-type QcfPages = Record<string, string[]>;
-type QcfWords = Record<string, number[][]>;
-type QcfAyahs = Record<string, [string, number][]>;
-const qcfPages = qcfPagesData as QcfPages;
-const qcfWords = qcfWordsData as QcfWords;
-const qcfAyahs = qcfAyahsData as QcfAyahs;
 const heads: Record<number, Record<number, number>> = {};
 const bisLines: Record<number, Record<number, boolean>> = {};
 const stackLines: Record<number, Record<number, boolean>> = {};
@@ -94,14 +83,58 @@ function clampPage(n: number): number {
   return Math.min(604, Math.max(1, Math.round(n)));
 }
 
+const pageFiles = new Map<number, PageFile>();
+const pageJobs = new Map<number, Promise<PageFile>>();
+const wordCountOf = new Map<string, number>();
+let pageIndex: IndexFile | null = null;
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(url);
+  return res.json() as Promise<T>;
+}
+
+async function loadPageIndex(): Promise<IndexFile> {
+  if (pageIndex) return pageIndex;
+  const idx = await fetchJson<IndexFile>(asset("pg/index.json"));
+  idx.pages.forEach((ayahs, i) => {
+    const counts = idx.words[i] ?? [];
+    ayahs.forEach((pair, j) => {
+      const s = pair[0] ?? 0;
+      const a = pair[1] ?? 0;
+      if (s && a) wordCountOf.set(`${s}:${a}`, counts[j] ?? wordCountOf.get(`${s}:${a}`) ?? 0);
+    });
+  });
+  pageIndex = idx;
+  return idx;
+}
+
+async function loadPageFile(n: number): Promise<PageFile> {
+  const hit = pageFiles.get(n);
+  if (hit) return hit;
+  const pending = pageJobs.get(n);
+  if (pending) return pending;
+  const job = fetchJson<PageFile>(asset(`pg/${clampPage(n)}.json`))
+    .then((data) => {
+      pageFiles.set(clampPage(n), data);
+      return data;
+    })
+    .finally(() => pageJobs.delete(clampPage(n)));
+  pageJobs.set(clampPage(n), job);
+  return job;
+}
+
+function precacheUrls(urls: string[]): void {
+  if (!urls.length || !("serviceWorker" in navigator)) return;
+  const send = (reg?: ServiceWorker | null) => reg?.postMessage({ type: "precache", urls });
+  send(navigator.serviceWorker.controller);
+  void navigator.serviceWorker.ready.then((r) => send(r.active)).catch(() => undefined);
+}
+
 export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () => void {
   const hashMode = opts?.hash === true;
-  let words: WordsFile | null = wordsData as WordsFile;
   // Ayahs per page follow the drawn Madinah layout so recitation and jumps match what is on screen.
-  let pages: number[][][] = Array.from({ length: 604 }, (_, i) =>
-    (qcfAyahs[String(i + 1)] ?? []).map(([key]) => key.split(":").map(Number)),
-  );
-  if (!pages.some((list) => list.length)) pages = (pagesData as PagesFile).pages;
+  let pages: number[][][] = Array.from({ length: 604 }, () => []);
   const pageOf = new Map<string, number>();
   const surahPage = new Map<number, number>();
   let page = 1;
@@ -132,10 +165,16 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   root.className = "tartil";
   root.innerHTML = `
     <header class="t-top">
+      <button type="button" class="t-ico t-turn t-next" data-i18n-aria="nav.next" data-i18n-title="nav.next">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
       <button type="button" class="t-ico t-surah-btn" aria-haspopup="dialog" aria-expanded="false" data-i18n-aria="nav.title" data-i18n-title="nav.title">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4z"/><path d="M5 4a3 3 0 0 0-3 3v13"/></svg>
       </button>
       <button type="button" class="t-missbtn" aria-expanded="false" data-i18n-aria="miss.btn">0</button>
+      <button type="button" class="t-ico t-turn t-prev" data-i18n-aria="nav.prev" data-i18n-title="nav.prev">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
       <button type="button" class="t-more" aria-expanded="false" aria-haspopup="dialog" data-i18n-title="set.title">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
@@ -167,13 +206,14 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       </div>
     </div>
     <div class="t-pnum" aria-live="polite"></div>
+    <p class="t-fontfail" hidden role="status"></p>
     <main class="t-page" dir="rtl"></main>
     <p class="t-foot"><span data-i18n="foot"></span></p>
     <div class="t-bar">
       <button type="button" class="t-mic" aria-pressed="false" data-i18n-aria="mic">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
       </button>
-      <div class="t-status">
+      <div class="t-status" aria-live="polite" aria-atomic="true">
         <b class="t-st"></b>
         <span class="t-sub"></span>
         <div class="t-load" aria-hidden="true"><i></i></div>
@@ -251,6 +291,24 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     moreBtn.setAttribute("aria-expanded", "false");
     moreBtn.classList.remove("on");
   }
+  function focusables(box: HTMLElement): HTMLElement[] {
+    return [...box.querySelectorAll<HTMLElement>("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])")]
+      .filter((el) => !el.disabled && !el.closest("[hidden]") && el.getAttribute("aria-hidden") !== "true");
+  }
+  function trapFocus(box: HTMLElement, ev: KeyboardEvent): void {
+    if (box.hidden || ev.key !== "Tab") return;
+    const nodes = focusables(box);
+    if (!nodes.length) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    if (ev.shiftKey && document.activeElement === first) {
+      ev.preventDefault();
+      last.focus();
+    } else if (!ev.shiftKey && document.activeElement === last) {
+      ev.preventDefault();
+      first.focus();
+    }
+  }
   moreBtn.addEventListener("click", () => {
     if (!setSheet.hidden) {
       closeSheet();
@@ -269,6 +327,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   });
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeSheet();
+    trapFocus(setSheet, e);
   });
   const missBox = need<HTMLElement>(".t-miss");
   const missList = need<HTMLElement>(".t-miss-list");
@@ -456,6 +515,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (!missBox.hidden) paintMisses();
   });
   need<HTMLButtonElement>(".t-miss-clear").addEventListener("click", () => {
+    if (!misses.length && !strikes.size) return;
+    if (!window.confirm(t("miss.clearConfirm"))) return;
     misses = [];
     strikes.clear();
     warns.clear();
@@ -488,6 +549,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     root.classList.toggle("theme-white", name === "white");
     root.classList.toggle("theme-black", name === "black");
     setSeg("theme", name);
+    const color = name === "black" ? "#111111" : name === "white" ? "#ffffff" : "#fffaf0";
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", color);
     try {
       localStorage.setItem("tartil.theme", name);
     } catch {
@@ -668,13 +731,93 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
   // The last word is confirmed while it is still being said, so the clip ends at the pause that follows (or after 4 s).
   let clipWait: { key: string; start: number; end0: number; ref: number; timer: number } | null = null;
+  const CLIP_DB = "tartil-clips";
+  const CLIP_STORE = "clips";
+  const CLIP_CAP = 8 * 1024 * 1024;
+  type ClipRec = { key: string; pcm: ArrayBuffer; t: number; last?: number };
+  function openClipDb(): Promise<IDBDatabase | null> {
+    return new Promise((resolve) => {
+      if (!("indexedDB" in window)) {
+        resolve(null);
+        return;
+      }
+      const req = indexedDB.open(CLIP_DB, 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains(CLIP_STORE)) req.result.createObjectStore(CLIP_STORE, { keyPath: "key" });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    });
+  }
+  function idbReq<T>(req: IDBRequest<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function persistClip(key: string, pcm: Float32Array): Promise<void> {
+    const db = await openClipDb();
+    if (!db) return;
+    try {
+      const rec: ClipRec = { key, pcm: pcm.slice().buffer, t: Date.now(), last: 1 };
+      const all = await new Promise<ClipRec[]>((resolve, reject) => {
+        const tx = db.transaction(CLIP_STORE, "readwrite");
+        const store = tx.objectStore(CLIP_STORE);
+        store.put(rec);
+        const req = store.getAll();
+        req.onsuccess = () => resolve((req.result || []) as ClipRec[]);
+        tx.onerror = () => reject(tx.error);
+      });
+      const others = all.filter((row) => row.key !== key).sort((a, b) => (a.t || 0) - (b.t || 0));
+      let total = all.reduce((sum, row) => sum + (row.pcm?.byteLength ?? 0), 0);
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(CLIP_STORE, "readwrite");
+        const store = tx.objectStore(CLIP_STORE);
+        for (const row of others) {
+          if (row.last) store.put({ ...row, last: 0 });
+        }
+        for (const row of others) {
+          if (total <= CLIP_CAP) break;
+          store.delete(row.key);
+          total -= row.pcm?.byteLength ?? 0;
+          clips.delete(row.key);
+        }
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch {
+      /* quota or private mode */
+    }
+    db.close();
+  }
+  async function restoreClips(): Promise<void> {
+    const db = await openClipDb();
+    if (!db) return;
+    try {
+      const read = db.transaction(CLIP_STORE, "readonly");
+      const all = (await idbReq(read.objectStore(CLIP_STORE).getAll())) as ClipRec[];
+      all.sort((a, b) => (a.t || 0) - (b.t || 0));
+      for (const row of all) {
+        if (!row?.key || !row.pcm) continue;
+        clips.set(row.key, new Float32Array(row.pcm));
+        if (row.last) lastClip = row.key;
+      }
+      if (!lastClip && all.length) lastClip = all[all.length - 1].key;
+      paintMine();
+    } catch {
+      /* ignore */
+    }
+    db.close();
+  }
   function keepClip(key: string, start: number, end: number): void {
     if (end - start < 8000) return;
     clips.delete(key);
-    clips.set(key, ringSlice(start, end));
+    const pcm = ringSlice(start, end);
+    clips.set(key, pcm);
     while (clips.size > 12) clips.delete(clips.keys().next().value as string);
     lastClip = key;
     paintMine();
+    void persistClip(key, pcm);
   }
   function settleClip(force: boolean): void {
     const w = clipWait;
@@ -765,9 +908,19 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   } catch {
     /* ignore */
   }
+  function todayErrorCount(): number {
+    const fromWeek = readWeek()[weekKey()]?.errors;
+    if (typeof fromWeek === "number") return fromWeek;
+    // Migrate older sessions that only stored the open-mistake list.
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const t0 = start.getTime();
+    return misses.filter((m) => (m.t || 0) >= t0).reduce((n, m) => n + (m.n || 1), 0);
+  }
   function paintToday(): void {
     const week = weekTotals();
-    todayEl.textContent = t("today", { d: dayAyahs.size, e: misses.length, wa: week.ayahs, we: week.errors });
+    // Today and week error counts are cumulative recorded mistakes (including ones later fixed), not the open list.
+    todayEl.textContent = t("today", { d: dayAyahs.size, e: todayErrorCount(), wa: week.ayahs, we: week.errors });
   }
   function weekKey(offset = 0): string {
     const n = new Date();
@@ -853,7 +1006,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
 
   function wordList(surah: number, ayah: number): string[] {
-    return words?.ayahs[surah - 1]?.[ayah - 1] ?? [];
+    const n = wordCountOf.get(`${surah}:${ayah}`) ?? 0;
+    return Array.from({ length: n }, () => "");
   }
 
   function loadNames(): Promise<void> {
@@ -947,14 +1101,14 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
 
   function draw(pageNo: number): void {
-    const pageLines = qcfPages[String(pageNo)] ?? [];
-    const wlens = qcfWords[String(pageNo)] ?? [];
-    const runs = qcfAyahs[String(pageNo)] ?? [];
+    const file = pageFiles.get(pageNo);
+    const pageLines = file?.lines ?? [];
+    const wlens = file?.wlens ?? [];
+    const runs = file?.runs ?? [];
     const marks: Record<number, number> = { ...(heads[pageNo] ?? {}) };
     const bis: Record<number, boolean> = { ...(bisLines[pageNo] ?? {}) };
     const stack: Record<number, boolean> = { ...(stackLines[pageNo] ?? {}) };
-    const prev = qcfPages[String(pageNo - 1)];
-    if (stack[0] && prev && !prev[14]) {
+    if (stack[0] && pageNo > 1 && !file?.prev14) {
       delete marks[0];
       delete stack[0];
       bis[0] = true;
@@ -1064,18 +1218,40 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
 
   let paint = 0;
+  function paintFontFail(ok: boolean): void {
+    pageEl.classList.toggle("font-fail", !ok);
+    const bar = need<HTMLElement>(".t-fontfail");
+    bar.hidden = ok;
+    bar.textContent = ok ? "" : t("font.fail");
+  }
+
+  function paintTurns(): void {
+    const prev = root.querySelector<HTMLButtonElement>(".t-prev");
+    const next = root.querySelector<HTMLButtonElement>(".t-next");
+    if (prev) prev.disabled = page <= 1;
+    if (next) next.disabled = page >= 604;
+  }
+
   async function render(): Promise<void> {
     const id = ++paint;
     const n = page;
     if (!pageEl.childElementCount) pageEl.textContent = t("loading");
+    let fontOk = loadedFonts.has(n);
     try {
-      await Promise.all([loadNames(), loadPageFont(n)]);
+      await Promise.all([
+        loadNames().catch(() => undefined),
+        loadPageFont(n).then(() => { fontOk = true; }, () => { fontOk = loadedFonts.has(n); }),
+        loadPageFile(n),
+      ]);
+      fontOk = loadedFonts.has(n);
     } catch {
-      /* draw anyway; the next page load retries */
+      fontOk = loadedFonts.has(n);
+      if (!pageFiles.has(n) && id === paint) pageEl.textContent = t("err.open", { x: t("nav.page") });
     }
     if (!alive || id !== paint) return;
+    paintFontFail(fontOk);
     const turned = pageInput.value !== String(n);
-    draw(n);
+    if (pageFiles.has(n)) draw(n);
     fit();
     if (turned && root.classList.contains("land")) window.scrollTo(0, 0);
     if (micOn || retryKey) applyShown();
@@ -1095,8 +1271,20 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       /* ignore quota */
     }
     const ahead = n + 1;
-    if (ahead <= 604) void loadPageFont(ahead).catch(() => undefined);
-    if (n > 1) void loadPageFont(n - 1).catch(() => undefined);
+    if (ahead <= 604) {
+      void loadPageFont(ahead).catch(() => undefined);
+      void loadPageFile(ahead).catch(() => undefined);
+    }
+    if (n > 1) {
+      void loadPageFont(n - 1).catch(() => undefined);
+      void loadPageFile(n - 1).catch(() => undefined);
+    }
+    paintTurns();
+    precacheUrls([
+      asset(`pg/${n}.json`),
+      ...(n > 1 ? [asset(`pg/${n - 1}.json`)] : []),
+      ...(ahead <= 604 ? [asset(`pg/${ahead}.json`)] : []),
+    ]);
   }
 
   function clearTimers(): void {
@@ -1475,16 +1663,14 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     checkAyahWords(lastHeardS, lastHeardA, true);
   }
 
-  async function loadBytes(url: string, label: string): Promise<ArrayBuffer> {
-    const cache = "caches" in window ? await caches.open("tartil-v1") : null;
-    const hit = cache ? await cache.match(url) : undefined;
-    if (hit) {
-      setProgress(1);
-      return hit.arrayBuffer();
-    }
-    const res = await fetch(url);
+  const MODEL_ID = __MODEL_ID__;
+  // The model that was shipped unversioned in tartil-v1. Only this hash may be reused from that cache.
+  const MODEL_LEGACY_ID = "bfb5b7126956";
+  const PACK_SIZES = { model: 69246033, wasm: 14848852, corpus: 5453439 };
+
+  async function readBody(res: Response, label: string, onBytes: (got: number, total: number) => void, fallback: number): Promise<ArrayBuffer> {
     if (!res.ok || !res.body) throw new Error(t("err.open", { x: label }));
-    const total = Number(res.headers.get("content-length") || 0);
+    const total = Number(res.headers.get("content-length") || 0) || fallback;
     const reader = res.body.getReader();
     const parts: Uint8Array[] = [];
     let got = 0;
@@ -1494,7 +1680,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       if (!chunk.value) continue;
       parts.push(chunk.value);
       got += chunk.value.byteLength;
-      if (total) setProgress(Math.min(0.99, got / total));
+      onBytes(got, total);
     }
     const buf = new Uint8Array(got);
     let offset = 0;
@@ -1502,15 +1688,63 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       buf.set(part, offset);
       offset += part.byteLength;
     }
-    if (cache) {
-      try {
-        await cache.put(url, new Response(buf.slice().buffer));
-      } catch {
-        /* cache optional */
+    return buf.buffer;
+  }
+
+  async function cachedGet(cacheName: string, url: string, also?: string): Promise<ArrayBuffer | null> {
+    if (!("caches" in window)) return null;
+    const cache = await caches.open(cacheName);
+    const hit = (await cache.match(url)) || (also ? await cache.match(also, { ignoreSearch: true }) : undefined);
+    return hit ? hit.arrayBuffer() : null;
+  }
+
+  async function cachedPut(cacheName: string, url: string, buf: ArrayBuffer): Promise<void> {
+    if (!("caches" in window)) return;
+    try {
+      const cache = await caches.open(cacheName);
+      await cache.put(url, new Response(buf.slice(0)));
+    } catch {
+      /* cache optional */
+    }
+  }
+
+  async function loadPackPart(
+    url: string,
+    label: string,
+    key: keyof typeof PACK_SIZES,
+    cacheName: string,
+    onTick: (key: keyof typeof PACK_SIZES, got: number, total: number) => void,
+    fallbackUrl?: string,
+  ): Promise<ArrayBuffer> {
+    const sized = PACK_SIZES[key];
+    const hit = await cachedGet(cacheName, url, fallbackUrl);
+    if (hit) {
+      onTick(key, hit.byteLength, hit.byteLength);
+      return hit;
+    }
+    const res = await fetch(url);
+    const buf = await readBody(res, label, (got, total) => onTick(key, got, total || sized), sized);
+    await cachedPut(cacheName, url, buf);
+    return buf;
+  }
+
+  async function loadModelBuffer(onTick: (key: keyof typeof PACK_SIZES, got: number, total: number) => void): Promise<ArrayBuffer> {
+    const url = asset(`model.onnx?v=${MODEL_ID}`);
+    const cacheName = `tartil-model-${MODEL_ID}`;
+    const hit = await cachedGet(cacheName, url, asset("model.onnx"));
+    if (hit) {
+      onTick("model", hit.byteLength, hit.byteLength);
+      return hit;
+    }
+    if (MODEL_ID === MODEL_LEGACY_ID) {
+      const legacy = await cachedGet("tartil-v1", asset("model.onnx"));
+      if (legacy) {
+        onTick("model", legacy.byteLength, legacy.byteLength);
+        await cachedPut(cacheName, url, legacy);
+        return legacy;
       }
     }
-    setProgress(1);
-    return buf.buffer;
+    return loadPackPart(url, "Model", "model", cacheName, onTick, asset("model.onnx"));
   }
 
   async function ensureSession(): Promise<FeedSession> {
@@ -1519,17 +1753,36 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     micBtn.disabled = true;
     setStatus(() => t("st.model"), () => t("st.modelSub"));
     setProgress(0.02);
+    try {
     const ort = await import("onnxruntime-web/wasm");
     const core = await import("@tilawa/core");
     const env = ort.env.wasm;
     env.numThreads = 1;
     env.proxy = true;
     env.wasmPaths = new URL(asset("ort/"), window.location.href).href;
-    const model = await loadBytes(asset("model.onnx"), "Model");
+    const got = { model: 0, wasm: 0, corpus: 0 };
+    const tot = { ...PACK_SIZES };
+    const tick = (key: keyof typeof PACK_SIZES, n: number, total: number) => {
+      got[key] = n;
+      if (total) tot[key] = total;
+      const sum = got.model + got.wasm + got.corpus;
+      const all = tot.model + tot.wasm + tot.corpus;
+      setProgress(Math.min(0.99, all ? sum / all : 0));
+    };
+    const wasmUrl = asset("ort/ort-wasm-simd-threaded.wasm");
+    const corpusUrl = asset("corpus.json");
+    const [model, , corpusBuf] = await Promise.all([
+      loadModelBuffer(tick),
+      loadPackPart(wasmUrl, "Engine", "wasm", "tartil-wasm", tick),
+      loadPackPart(corpusUrl, t("st.lex"), "corpus", "tartil-corpus", tick),
+    ]);
     setStatus(() => t("st.lex"), () => t("st.lexSub"));
-    const corpusRes = await fetch(asset("corpus.json"));
-    if (!corpusRes.ok) throw new Error(t("err.lex"));
-    const corpus: unknown = await corpusRes.json();
+    let corpus: unknown;
+    try {
+      corpus = JSON.parse(new TextDecoder().decode(corpusBuf));
+    } catch {
+      throw new Error(t("err.lex"));
+    }
     let created: FeedSession;
     try {
       created = await core.createRecognitionSession({
@@ -1564,9 +1817,13 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       created.zipformer.setMode("correction");
       applyWordStrictness();
     }
-    loadingModel = false;
-    setProgress(null);
     return created;
+    } catch (err) {
+      throw err;
+    } finally {
+      loadingModel = false;
+      setProgress(null);
+    }
   }
 
   function resample(input: Float32Array, fromRate: number): Float32Array {
@@ -1601,7 +1858,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   // move on to the page's next segment once they reach the current segment's last ayah. The engine skips the basmala
   // before the next surah's first word when it locks.
   function expectPage(at?: { surah: number; ayah: number }): void {
-    if (retryKey || !session?.zipformer || !words) return;
+    if (retryKey || !session?.zipformer) return;
     const list = pages[page - 1] ?? [];
     if (!list.length) return;
     const segs: { surah: number; first: number; last: number }[] = [];
@@ -1620,7 +1877,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       if (i >= 0) k = i;
     }
     const seg = segs[k];
-    const total = words.ayahs[seg.surah - 1]?.length ?? seg.last;
+    const total = pageIndex?.ayahs[seg.surah - 1] ?? seg.last;
     // Expect this segment plus the next ayah, which still turns the page. A window to the end of a long surah made each
     // pause allocate gigabytes in the recitation checks and froze or crashed the tab.
     const end = Math.min(total, seg.last + 1);
@@ -1737,10 +1994,39 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     }
   }
 
+  let liveCtx: AudioContext | null = null;
+  let liveTrack: MediaStreamTrack | null = null;
+  let micLost = false;
+  async function onMicLost(): Promise<void> {
+    if (!micOn || micLost) return;
+    micLost = true;
+    quietStop = true;
+    try {
+      await stopMic();
+    } finally {
+      quietStop = false;
+      micLost = false;
+    }
+    setStatus(() => t("st.micStopped"), () => t("st.micStoppedSub"));
+  }
   function onVisible(): void {
-    if (micOn && document.visibilityState === "visible") void lockWake();
+    if (document.visibilityState !== "visible") return;
+    void liveCtx?.resume().catch(() => undefined);
+    void voice?.resume().catch(() => undefined);
+    if (micOn) {
+      void lockWake();
+      if (liveTrack && liveTrack.readyState === "ended") void onMicLost();
+    }
+  }
+  function onPageShow(): void {
+    onVisible();
+  }
+  function onPageHide(): void {
+    /* iOS may suspend the context; we resume on show. */
   }
   document.addEventListener("visibilitychange", onVisible);
+  window.addEventListener("pageshow", onPageShow);
+  window.addEventListener("pagehide", onPageHide);
 
   let voice: AudioContext | null = null;
   let voiceStop: (() => void) | null = null;
@@ -1921,6 +2207,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       return;
     }
     const track = stream.getAudioTracks()[0];
+    liveTrack = track || null;
     if (track) {
       try {
         await track.applyConstraints({
@@ -1932,6 +2219,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       } catch {
         /* the browser keeps its own defaults */
       }
+      track.addEventListener("ended", () => { void onMicLost(); });
     }
     let ctx: AudioContext;
     try {
@@ -1939,10 +2227,13 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     } catch {
       ctx = new AudioContext({ latencyHint: "interactive" });
     }
+    liveCtx = ctx;
     await ctx.resume();
     await new Promise((resolve) => window.requestAnimationFrame(() => resolve(undefined)));
     if (!micOn) {
       stream.getTracks().forEach((t) => t.stop());
+      if (liveCtx === ctx) liveCtx = null;
+      liveTrack = null;
       void ctx.close();
       return;
     }
@@ -1962,13 +2253,19 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       if (pending.length > chunkSize * 2) tj.dropped();
       pending = pending.length > chunkSize * 2 ? pending.slice(pending.length - chunkSize) : pending.slice(chunkSize);
       feeding = true;
-      void engine.feed(slice).catch(() => undefined).then(() => {
+      void engine.feed(slice).then(() => {
         feeding = false;
         if (!micOn) {
           feedDone?.();
           return;
         }
         window.setTimeout(pump, 20);
+      }, (err: unknown) => {
+        feeding = false;
+        const message = err instanceof Error && err.message ? err.message : t("st.feedErr");
+        setStatus(() => t("st.failed"), () => message || t("st.feedErr"));
+        if (!micOn) feedDone?.();
+        else window.setTimeout(pump, 40);
       });
     };
     const pushPcm = (next: Float32Array) => {
@@ -1991,6 +2288,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       await ctx.audioWorklet.addModule(asset("mic-worklet.js"));
       if (!micOn) {
         stream.getTracks().forEach((t) => t.stop());
+        if (liveCtx === ctx) liveCtx = null;
+        liveTrack = null;
         void ctx.close();
         return;
       }
@@ -2051,6 +2350,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         /* already stopped */
       }
       stream.getTracks().forEach((t) => t.stop());
+      if (liveCtx === ctx) liveCtx = null;
+      if (liveTrack && stream.getTracks().includes(liveTrack)) liveTrack = null;
       void ctx.close();
       await Promise.race([
         new Promise<void>((resolve) => {
@@ -2176,6 +2477,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   });
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeNav();
+    trapFocus(navSheet, e);
   });
   need<HTMLFormElement>(".t-goform").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -2224,6 +2526,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     go(page + (dx > 0 ? 1 : -1));
   }, { passive: true });
 
+  root.querySelector(".t-next")?.addEventListener("click", () => go(page + 1));
+  root.querySelector(".t-prev")?.addEventListener("click", () => go(page - 1));
   window.addEventListener("keydown", onKey);
   function onHash(): void {
     if (!hashMode) return;
@@ -2241,15 +2545,20 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (ev.key === "ArrowRight") go(page - 1);
   }
 
-  pages.forEach((ayahs, i) => {
-    for (const pair of ayahs) {
-      const surah = pair[0] ?? 0;
-      const ayah = pair[1] ?? 0;
-      const key = `${surah}:${ayah}`;
-      if (!pageOf.has(key)) pageOf.set(key, i + 1);
-      if (ayah === 1 && !surahPage.has(surah)) surahPage.set(surah, i + 1);
-    }
-  });
+  function applyIndex(idx: IndexFile): void {
+    pages = idx.pages.map((list) => list.map((pair) => [pair[0] ?? 0, pair[1] ?? 0]));
+    pageOf.clear();
+    surahPage.clear();
+    pages.forEach((ayahs, i) => {
+      for (const pair of ayahs) {
+        const surah = pair[0] ?? 0;
+        const ayah = pair[1] ?? 0;
+        const key = `${surah}:${ayah}`;
+        if (!pageOf.has(key)) pageOf.set(key, i + 1);
+        if (ayah === 1 && !surahPage.has(surah)) surahPage.set(surah, i + 1);
+      }
+    });
+  }
   for (let i = 1; i <= 114; i += 1) {
     const opt = document.createElement("option");
     opt.value = String(i);
@@ -2274,11 +2583,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     /* ignore */
   }
   const explicit = hashMode && fromHash > 0 && fromHash !== savedPage;
-  if (!explicit && misses.length) {
-    const first = [...misses].sort((a, b) => a.s - b.s || a.a - b.a || a.w - b.w)[0];
-    const errPage = first ? pageOf.get(`${first.s}:${first.a}`) : 0;
-    if (errPage) start = errPage;
-  }
+  // Open on the last recited/visited page (tartil.read, then tartil.page). The mistake badge and Düzəlt still jump.
+  if (!explicit) start = readPage || savedPage || start;
   page = clampPage(start);
   function showBack(): void {
     const read = Number(localStorage.getItem("tartil.read") || "") || readPage;
@@ -2317,6 +2623,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (micPick.options[0] && !micPick.options[0].value) micPick.options[0].textContent = t("mic");
     tj.relabel();
     paintPageNo();
+    paintTurns();
+    if (!need<HTMLElement>(".t-fontfail").hidden) paintFontFail(false);
     redrawStatus();
   }
   langSel.addEventListener("change", () => {
@@ -2325,8 +2633,26 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   });
   onLang(refreshLang);
   refreshLang();
-  void render();
-  setStatus(() => t("st.read"), () => t("st.readSub"));
+  void restoreClips();
+  setStatus(() => t("loading"), () => t("st.readSub"));
+  void (async () => {
+    try {
+      applyIndex(await loadPageIndex());
+      precacheUrls([asset("pg/index.json")]);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("err.open", { x: "index" });
+      setStatus(() => t("st.failed"), message);
+      return;
+    }
+    if (!alive) return;
+    if (!explicit) {
+      const read = Number(localStorage.getItem("tartil.read") || "") || readPage || savedPage;
+      if (read) start = read;
+    }
+    page = clampPage(start);
+    setStatus(() => t("st.read"), () => t("st.readSub"));
+    await render();
+  })();
   const onResize = () => fit();
   window.addEventListener("resize", onResize);
   const barWatch = typeof ResizeObserver === "function" ? new ResizeObserver(() => fit()) : null;
@@ -2352,6 +2678,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     window.removeEventListener("resize", onResize);
     barWatch?.disconnect();
     document.removeEventListener("visibilitychange", onVisible);
+    window.removeEventListener("pageshow", onPageShow);
+    window.removeEventListener("pagehide", onPageHide);
     clearTimers();
     void wake?.release();
     if (micOn) void stopMic();

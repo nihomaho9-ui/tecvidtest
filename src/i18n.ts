@@ -86,7 +86,7 @@ const D = {
   "st.wordFixed": ["{p} — söz düzəldi. Ayəni bitirin.", "{p} — kelime düzeldi. Ayeti bitirin.", "{p} — word fixed. Finish the ayah.", "{p} — صُحّحت الكلمة. أكمل الآية.", "{p} — слово исправлено. Закончите аят."],
   "err.open": ["{x} açılmadı", "{x} açılamadı", "Could not open {x}", "تعذّر فتح {x}", "Не удалось открыть: {x}"],
   "st.model": ["Model yüklənir", "Model yükleniyor", "Loading model", "جارٍ تحميل النموذج", "Загрузка модели"],
-  "st.modelSub": ["Bir dəfə, təxminən 66 MB. Sonra telefonda qalır.", "Bir kez, yaklaşık 66 MB. Sonra telefonda kalır.", "Once, about 66 MB. Then it stays on the phone.", "مرة واحدة، نحو 66 ميغابايت. ثم يبقى على الهاتف.", "Один раз, около 66 МБ. Потом остаётся на телефоне."],
+  "st.modelSub": ["Bir dəfə, təxminən 85 MB (model, lüğət və mühərrik). Sonra telefonda qalır.", "Bir kez, yaklaşık 85 MB (model, sözlük ve motor). Sonra telefonda kalır.", "Once, about 85 MB (model, lexicon and engine). Then it stays on the phone.", "مرة واحدة، نحو 85 ميغابايت (النموذج والمعجم والمحرّك). ثم يبقى على الهاتف.", "Один раз, около 85 МБ (модель, словарь и движок). Потом остаётся на телефоне."],
   "st.lex": ["Lüğət açılır", "Sözlük açılıyor", "Opening lexicon", "جارٍ فتح المعجم", "Открывается словарь"],
   "st.lexSub": ["Ayə sözləri hazırlanır…", "Ayet kelimeleri hazırlanıyor…", "Preparing ayah words…", "تجهيز كلمات الآيات…", "Подготовка слов аятов…"],
   "err.lex": ["Lüğət açılmadı", "Sözlük açılamadı", "Could not open the lexicon", "تعذّر فتح المعجم", "Не удалось открыть словарь"],
@@ -145,6 +145,11 @@ const D = {
   "tj.head": ["Ayə {a} — təcvid rəyi", "Ayet {a} — tecvid yorumu", "Ayah {a} — tajwid review", "الآية {a} — ملاحظات التجويد", "Аят {a} — разбор таджвида"],
   "tj.count": ["{n} qeyd","{n} not","Notes: {n}","ملاحظات: {n}","Заметки: {n}"],
   "tj.again": ["Ayəni yenidən oxu", "Ayeti yeniden oku", "Read the ayah again", "أعد قراءة الآية", "Прочитать аят заново"],
+  "miss.clearConfirm": ["Bütün xətalar silinsin? Bu addım geri alınmır.", "Tüm hatalar silinsin mi? Bu işlem geri alınamaz.", "Clear all mistakes? This cannot be undone.", "هل تريد مسح كل الأخطاء؟ لا يمكن التراجع عن ذلك.", "Удалить все ошибки? Это нельзя отменить."],
+  "st.micStopped": ["Mikrofon dayandı", "Mikrofon durdu", "Microphone stopped", "توقف الميكروفون", "Микрофон остановился"],
+  "st.micStoppedSub": ["Telefon başqa proqrama keçəndə mikrofon bağlana bilər. Yenidən açmaq üçün düyməyə basın.", "Telefonda başka bir uygulamaya geçince mikrofon kapanabilir. Yeniden açmak için düğmeye basın.", "The mic may stop when you leave the app. Tap the button to start it again.", "قد يتوقف الميكروفون عند مغادرة التطبيق. اضغط الزر لتشغيله من جديد.", "Микрофон может выключиться, если вы покинете приложение. Нажмите кнопку, чтобы включить его снова."],
+  "st.feedErr": ["Səs emalında xəta oldu. Mikrofonu yenidən açın.", "Ses işlenirken bir hata oldu. Mikrofonu yeniden açın.", "Something went wrong while processing the audio. Turn the mic on again.", "حدث خطأ أثناء معالجة الصوت. شغّل الميكروفون مرة أخرى.", "Ошибка при обработке звука. Включите микрофон снова."],
+  "font.fail": ["Bu səhifənin yazı tipi yüklənmədi. İnterneti yoxlayıb səhifəni yeniləyin.", "Bu sayfanın yazı tipi yüklenemedi. İnterneti kontrol edip sayfayı yenileyin.", "This page's font could not be loaded. Check your connection and refresh.", "تعذّر تحميل خط هذه الصفحة. تحقق من الاتصال ثم حدّث الصفحة.", "Не удалось загрузить шрифт этой страницы. Проверьте соединение и обновите страницу."],
   "tj.go": ["Davam et", "Devam et", "Continue", "متابعة", "Продолжить"],
 } as const;
 export type Key = keyof typeof D;

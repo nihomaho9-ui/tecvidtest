@@ -1,8 +1,40 @@
-const SHELL = "tecvid-shell-v13";
+const SHELL = "tecvid-shell-v14";
 const FONTS = "https://mushafuk.online/yazi-fonts/";
+// Replaced at build time with the hashed JS/CSS filenames in dist/assets.
+const ASSETS = "__SHELL_ASSETS__";
+
+function shellList() {
+  const base = self.registration.scope;
+  const listed = Array.isArray(ASSETS) ? ASSETS : [];
+  const defaults = [
+    "./",
+    "./index.html",
+    "./sura_names.woff2",
+    "./corpus.json",
+    "./ort/ort-wasm-simd-threaded.wasm",
+    "./ort/ort-wasm-simd-threaded.mjs",
+    "./fonts/AmiriQuran-arabic.woff2",
+    "./mic-worklet.js",
+    "./surah-banner.png",
+    "./manifest.webmanifest",
+    "./pg/index.json",
+    "./favicon.ico",
+    "./favicon-32.png",
+    "./icon-192.png",
+    "./apple-touch-icon.png",
+  ];
+  return [...new Set([...defaults, ...listed])].map((path) => new URL(path, base).href);
+}
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(self.skipWaiting());
+  event.waitUntil(
+    caches
+      .open(SHELL)
+      .then((cache) =>
+        Promise.all(shellList().map((url) => cache.add(url).catch(() => undefined))),
+      )
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener("activate", (event) => {
@@ -10,6 +42,14 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(keys.filter((key) => (key.startsWith("tecvid-shell-") && key !== SHELL) || key === "tartil-audio").map((key) => caches.delete(key))),
     ).then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener("message", (event) => {
+  const data = event.data;
+  if (!data || data.type !== "precache" || !Array.isArray(data.urls)) return;
+  event.waitUntil(
+    caches.open(SHELL).then((cache) => Promise.all(data.urls.map((url) => cache.add(url).catch(() => undefined)))),
   );
 });
 
