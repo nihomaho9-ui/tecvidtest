@@ -24,7 +24,7 @@ type FeedSession = {
     setSlipHead: (mode: false | "strict" | "high") => void;
     correct: (action: "review_later" | "retry" | "continue") => unknown;
     verdicts: () => Verdict[];
-    correction: { state: { phase?: string }; suppressed?: { delete: (wordIndex: number) => void } };
+    correction: { state: { phase?: string }; suppressed?: { delete: (wordIndex: number) => void }; thresholds?: Record<string, number> };
   } | null;
 };
 type Issue = { surah?: number; ayah?: number; word?: number; kind?: string; wordIndex?: number; source?: string };
@@ -276,6 +276,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   const strikes = new Map<string, number>();
   const warns = new Set<string>();
   let sense: "normal" | "sert" | "cetin" = "normal";
+  let lastHeardS = 0;
+  let lastHeardA = 0;
   let hifz = false;
   let queueOn = false;
   // The user's own voice: a rolling ring of mic audio, cut into one clip per finished ayah (kept in memory only).
@@ -535,7 +537,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (announce) {
       setStatus(() => t(name === "cetin" ? "sense.cetin" : name === "sert" ? "sense.sert" : "sense.normal"), () => senseHint.textContent || "");
     }
-    session?.zipformer?.setSlipHead("high");
+    applyWordStrictness();
     try {
       localStorage.setItem("tartil.sense", name);
     } catch {
@@ -543,6 +545,24 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     }
   }
   applySense(sense);
+  // Sərt / Çətin word checks: GOP posterior vs expected word, slightly looser
+  // mid-ayah distance gates, and a last-ayah review at stop. Slip head stays off
+  // (it flags false vowels on clean recitations and catches no extra mistakes).
+  // Normal is left on the previous path.
+  const SERT_THRESHOLDS = { gopFlag: -5, substitutionDistance: 0.5, vowelWordMargin: 0.65, vowelMargin: 0.04 };
+  const NORMAL_THRESHOLDS = { gopFlag: Number.NEGATIVE_INFINITY, substitutionDistance: 0.6, vowelWordMargin: 0.8, vowelMargin: 0.05 };
+  function applyWordStrictness(): void {
+    const z = session?.zipformer;
+    if (!z) return;
+    z.setSlipHead(false);
+    if (z.correction?.thresholds) {
+      Object.assign(z.correction.thresholds, sense === "sert" || sense === "cetin" ? SERT_THRESHOLDS : NORMAL_THRESHOLDS);
+    }
+  }
+  function wordCheckParams(): { fineDist: number; omitHeard: number; subDist: number; subMargin: number } {
+    if (sense === "sert" || sense === "cetin") return { fineDist: 0.3, omitHeard: 0.45, subDist: 0.5, subMargin: 0.4 };
+    return { fineDist: 0.25, omitHeard: 0.35, subDist: 0.6, subMargin: 0.5 };
+  }
   // Madd munfasil length the reciter follows (Çətin tajwid check): 4–5 counts (default) or 2 (qasr, never flagged short).
   let munfasil: 2 | 4 = 4;
   try {
@@ -1399,6 +1419,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     const idxs = new Set<number>(msg.matched_indices ?? []);
     for (let i = 0; i <= upto; i += 1) idxs.add(i);
     if (!idxs.size) return;
+    lastHeardS = surah;
+    lastHeardA = ayah;
     checkFinishedAyah(surah, ayah);
     if (surah) expectPage({ surah, ayah });
     tj.heard(surah, ayah);
@@ -1408,9 +1430,10 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   // When the reciter starts ayah N+1, judge ayah N's words once more with its whole audio settled.
   // Tuned on real qari recordings with spliced mistakes (tools/recitation-bench): no extra flags on
   // clean takes, and it catches dropped endings and dropped or swapped words the live rules miss.
-  function checkFinishedAyah(surah: number, ayah: number): void {
-    const key = `${surah}:${ayah}`;
-    if (retryKey || ayah < 2 || ayahChecked.has(key)) return;
+  // Sərt / Çətin also review the last ayah at mic stop (Normal still only runs this on N+1).
+  function checkAyahWords(surah: number, ayah: number, evenIfRetry = false): void {
+    const key = `words:${surah}:${ayah}`;
+    if ((!evenIfRetry && retryKey) || ayahChecked.has(key)) return;
     ayahChecked.add(key);
     let all: Verdict[] = [];
     try {
@@ -1418,28 +1441,38 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     } catch {
       return;
     }
-    const v = all.filter((x) => x.surah === surah && x.ayah === ayah - 1).sort((a, b) => a.word - b.word);
+    const v = all.filter((x) => x.surah === surah && x.ayah === ayah).sort((a, b) => a.word - b.word);
     if (v.length < 3) return;
+    const p = wordCheckParams();
     const found: Issue[] = [];
     const lost = (x: Verdict) => x.state === "skipped" || (x.state === "wrong" && x.distance >= 0.5);
     let k = v.length;
     while (k > 0 && lost(v[k - 1])) k -= 1;
     if (k < v.length && k > 0 && v[k - 1].state !== "skipped") {
-      found.push({ surah, ayah: ayah - 1, word: v[k].word, kind: "possible_omission" });
+      found.push({ surah, ayah, word: v[k].word, kind: "possible_omission" });
     }
-    const fine = (x?: Verdict) => !!x && (x.state === "ok" || x.state === "unsure") && x.distance <= 0.25;
+    const fine = (x?: Verdict) => !!x && (x.state === "ok" || x.state === "unsure") && x.distance <= p.fineDist;
     for (let i = 1; i < k - 1; i += 1) {
       const x = v[i];
       if (!fine(v[i - 1]) || !fine(v[i + 1])) continue;
-      if (x.state === "skipped" && x.heardRatio <= 0.35) found.push({ surah, ayah: ayah - 1, word: x.word, kind: "possible_omission" });
-      else if (x.state === "wrong" && x.distance >= 0.6 && x.margin >= 0.5) {
-        found.push({ surah, ayah: ayah - 1, word: x.word, kind: "possible_substitution" });
+      if (x.state === "skipped" && x.heardRatio <= p.omitHeard) found.push({ surah, ayah, word: x.word, kind: "possible_omission" });
+      else if (x.state === "wrong" && x.distance >= p.subDist && x.margin >= p.subMargin) {
+        found.push({ surah, ayah, word: x.word, kind: "possible_substitution" });
       }
     }
     for (const issue of found) {
       const near = takeMisses.some((m) => m.s === issue.surah && m.a === issue.ayah && Math.abs(m.w - (issue.word ?? -9)) <= 1);
       if (!near && noteStrike(issue)) remember(issue);
     }
+  }
+  function checkFinishedAyah(surah: number, ayah: number): void {
+    if (ayah < 2) return;
+    checkAyahWords(surah, ayah - 1);
+  }
+  function checkLastHeardAyah(): void {
+    if (sense !== "sert" && sense !== "cetin") return;
+    if (!lastHeardS || !lastHeardA) return;
+    checkAyahWords(lastHeardS, lastHeardA, true);
   }
 
   async function loadBytes(url: string, label: string): Promise<ArrayBuffer> {
@@ -1529,6 +1562,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       // The slip head added false vowel flags on clean qari recordings and caught nothing extra.
       created.zipformer.setSlipHead(false);
       created.zipformer.setMode("correction");
+      applyWordStrictness();
     }
     loadingModel = false;
     setProgress(null);
@@ -1803,6 +1837,9 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     engine.reset();
     tj.newTake();
     engine.zipformer?.setMode("correction");
+    applyWordStrictness();
+    lastHeardS = 0;
+    lastHeardA = 0;
     shown.clear();
     freshKey = "";
     clearTimers();
@@ -2050,6 +2087,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     settleClip(true);
     stopClip();
     if (!micOn && !audioStop) return;
+    // Sərt / Çətin: review the last ayah before the take's miss list is snapshotted.
+    checkLastHeardAyah();
     micOn = false;
     micBtn.disabled = false;
     root.classList.remove("mic", "retry");
