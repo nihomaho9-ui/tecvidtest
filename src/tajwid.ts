@@ -1,8 +1,11 @@
-// "Çətin" mode tajwid check: madd, ghunna and ikhfa held too short, judged against the reciter's own tempo and
-// Husary's reference reading of the same page (public/tj/<page>.json, built by tools/tajwid-prep.mjs).
+// Çətin tajwid check (madd, ghunna, ikhfa, qalqala, waqf) plus Sərt/Çətin letter-pronunciation GOP.
+// Duration rules use Husary's page reference (public/tj/<page>.json). Letter flags do not need it.
 import { CLASSES, ayahTokens, alignAyah, measure, judge, setEquivalence, errorVariant, siteLLR, tokenClass, qprobeScore, findStops, WAQF, type TjIssue } from "./tajwid-core.js";
 import QPROBE from "./tajwid-qprobe.json";
 import QMID from "./tajwid-qmid.json";
+import THRESHOLDS_JSON from "./letter-gop-thresholds.json";
+import { buildIndex, scoreAyah, judgeLetterRows, type LetterIndex, type LetterIssue, type LetterThresholds } from "./letter-gop.js";
+const THRESHOLDS = THRESHOLDS_JSON as LetterThresholds;
 import { t } from "./i18n";
 
 type RefAyah = {
@@ -19,13 +22,20 @@ type Runner = {
 };
 // Wrong-stop (waqf) note: the stop word and whether the reader went back (soft) or carried on.
 type WaqfIssue = { i: number; w: number; kind: "waqf"; sub: "waqf" | "waqf-soft"; type?: string; r: number; rRef: null };
-type Note = TjIssue | WaqfIssue;
+type Note = TjIssue | WaqfIssue | LetterIssue;
 const ENC = 512;
 export type TjFound = Note & { s: number; a: number; text: string };
 
-const COLOR: Record<string, string> = { madd: "#0e8a7d", ghunna: "#7a4cc8", ikhfa: "#d9731a", qalqala: "#2a6fb0", waqf: "#c0392b" };
-const LABEL = (kind: string): string =>
-  t(
+const COLOR: Record<string, string> = { madd: "#0e8a7d", ghunna: "#7a4cc8", ikhfa: "#d9731a", qalqala: "#2a6fb0", waqf: "#c0392b", letter: "#a15b2e" };
+const LABEL = (kind: string, sub?: string): string => {
+  if (kind === "letter") {
+    if (sub === "qalqala") return t("tj.label.qalqala");
+    if (sub === "ghunna") return t("tj.label.letterGhunna");
+    if (sub === "ikhfa") return t("tj.label.letterIkhfa");
+    if (sub === "extra-ghunna") return t("tj.label.extraGhunna");
+    return t("tj.label.letter");
+  }
+  return t(
     kind === "waqf"
       ? "tj.label.waqf"
       : kind === "ghunna"
@@ -36,14 +46,29 @@ const LABEL = (kind: string): string =>
             ? "tj.label.qalqala"
             : "tj.label.madd",
   );
+};
 const RING = 25 * 240; // 4 minutes of decoder frames
 
 // Mark substituted for {w} so the Uthmani word can be inserted as a bidi-isolated span (Amiri Quran),
 // not mixed as plain text (which can look garbled in a Latin-script sentence).
 const WORD_MARK = "\uFFF0";
 
+function bareLetter(tok?: string): string {
+  if (!tok) return "";
+  const m = tok.match(/[ءاأببتثجحخدذرزسشصضطظعغفقكلمنهوي]/);
+  return m ? m[0] : tok;
+}
 function explain(x: Note, w = ""): string {
-  const vars = { h: "", w };
+  const vars: Record<string, string> = { h: "", w, exp: "", heard: "" };
+  if (x.kind === "letter") {
+    vars.exp = bareLetter((x as LetterIssue).expected);
+    vars.heard = bareLetter((x as LetterIssue).heard);
+    if (x.sub === "qalqala") return t("tj.letterQalqala", vars);
+    if (x.sub === "ghunna") return t("tj.letterGhunna", vars);
+    if (x.sub === "ikhfa") return t("tj.letterIkhfa", vars);
+    if (x.sub === "extra-ghunna") return t("tj.letterExtraGhunna", vars);
+    return t("tj.letter", vars);
+  }
   if (x.kind === "waqf") return t(x.sub === "waqf-soft" ? "tj.waqfSoft" : "tj.waqf", vars);
   vars.h = t(x.r < 1.35 ? "tj.heard2" : "tj.heardShort");
   if (x.type === "long") return t("tj.long", vars);
@@ -83,7 +108,10 @@ export interface TajwidHost {
 }
 
 export function createTajwid(host: TajwidHost) {
-  let on = false;
+  let onTajwid = false;
+  let onLetters = false;
+  let letterIndex: LetterIndex | null = null;
+  const active = (): boolean => onTajwid || onLetters;
   let munfasil: 2 | 4 = 4; // madd munfasil length the reciter follows: 2 (qasr) or 4–5 counts
   let core: Core | null = null;
   let corpus: Corpus | null = null;
@@ -152,6 +180,7 @@ export function createTajwid(host: TajwidHost) {
   function attach(zip: unknown, c: Core, corp: unknown): void {
     core = c;
     setEquivalence(c.TOKENS);
+    letterIndex = buildIndex(c.TOKENS);
     corpus = corp as Corpus;
     const runner = (zip as { runner?: Runner } | null)?.runner;
     if (!runner || runner.__tj) return;
@@ -195,13 +224,13 @@ export function createTajwid(host: TajwidHost) {
     lastDrop = frames;
   }
   function heard(s: number, a: number): void {
-    if (!on) return;
+    if (!active()) return;
     const key = `${s}:${a}`;
     if (!starts.has(key)) starts.set(key, frames);
   }
 
   function ayahDone(s: number, a: number): void {
-    if (!on || !core || !corpus) return;
+    if (!active() || !core || !corpus) return;
     const key = `${s}:${a}`;
     if (done.has(key)) return;
     if (!starts.has(key)) return skip("nostart");
@@ -213,15 +242,15 @@ export function createTajwid(host: TajwidHost) {
     if (!core || !corpus) return;
     const key = `${s}:${a}`;
     const p = host.pageOf(s, a);
-    const ref = p ? await refPage(p) : null;
+    const ref = onTajwid && p ? await refPage(p) : null;
     const refAyah = ref?.ayahs.find((x) => x.s === s && x.a === a);
-    if (!refAyah) {
+    if (onTajwid && !refAyah) {
       skip("noref");
       if (p && noted !== p) {
         noted = p;
-        quiet(t("tj.noData"));
+        if (!onLetters) quiet(t("tj.noData"));
       }
-      return;
+      if (!onLetters) return;
     }
     const t0 = performance.now();
     const end = frames;
@@ -255,9 +284,10 @@ export function createTajwid(host: TajwidHost) {
     };
     const qprobe = enc && al ? (i: number): number => qprobeScore(enc, T, al.start[i], QPROBE as never) : undefined;
     const qmid = enc && al ? (i: number): number => qprobeScore(enc, T, al.start[i], QMID as never) : undefined;
-    const issues: Note[] = al ? judge(measure(al, at), refAyah, { llr, at, qprobe, qmid, munfasil }) : [];
-    const table = al ? await waqfTable() : null;
-    if (al && table) {
+    const issues: Note[] = [];
+    if (onTajwid && al && refAyah) issues.push(...judge(measure(al, at), refAyah, { llr, at, qprobe, qmid, munfasil }));
+    const table = onTajwid && al ? await waqfTable() : null;
+    if (onTajwid && al && table) {
       // wrong stop: a pause mid-ayah where no waqf mark (or Husary's own pause) allows one
       const marks: Record<number, string> = {};
       for (const x of (table[s - 1]?.[a - 1] || "").split(",")) {
@@ -272,8 +302,11 @@ export function createTajwid(host: TajwidHost) {
       if (wq.length > 40) wq.shift();
       for (const x of stops)
         issues.push({ i: -1, w: x.w, kind: "waqf", sub: x.soft ? "waqf-soft" : "waqf", type: "waqf", r: 1, rRef: null });
-      issues.sort((x, y) => x.w - y.w);
     }
+    if (onLetters && al && letterIndex && measure(al, at).poor <= 0.15) {
+      issues.push(...judgeLetterRows(scoreAyah(lp, T, at, al, letterIndex), THRESHOLDS));
+    }
+    issues.sort((x, y) => x.w - y.w);
     stats.push(performance.now() - t0);
     const words = corpus.surahs[s - 1].ayahs[a - 1].w;
     // words[i] = [QCF glyphs, phoneme spelling, Uthmani]. Only [2] is shown on the card.
@@ -409,7 +442,7 @@ export function createTajwid(host: TajwidHost) {
       const mid = document.createElement("div");
       mid.className = "tj-mid";
       const b = document.createElement("b");
-      b.textContent = x.type === "long" ? t("tj.label.long") : x.sub === "waqf-soft" ? t("tj.label.waqfSoft") : LABEL(x.kind);
+      b.textContent = x.type === "long" ? t("tj.label.long") : x.sub === "waqf-soft" ? t("tj.label.waqfSoft") : LABEL(x.kind, x.sub);
       const d = document.createElement("div");
       appendExplain(d, x);
       mid.append(b, d);
@@ -488,7 +521,7 @@ export function createTajwid(host: TajwidHost) {
       if (!card.hidden && !collapsed && cardKey) open(cardKey);
     },
     get on() {
-      return on;
+      return active();
     },
     setMunfasil(n: 2 | 4) {
       munfasil = n;
@@ -496,9 +529,14 @@ export function createTajwid(host: TajwidHost) {
       w.__tj = { ...(w.__tj || {}), munfasil: n };
     },
     set(v: boolean) {
-      on = v;
-      host.root.classList.toggle("tj-mode", v);
-      if (!v) {
+      // Backward-compatible: v enables Çətin (tajwid + letters). Use setMode for Sərt.
+      this.setMode({ tajwid: v, letters: v });
+    },
+    setMode(opts: { tajwid?: boolean; letters?: boolean }) {
+      if (opts.tajwid !== undefined) onTajwid = opts.tajwid;
+      if (opts.letters !== undefined) onLetters = opts.letters;
+      host.root.classList.toggle("tj-mode", active());
+      if (!active()) {
         found.clear();
         paint();
         close();
@@ -512,7 +550,7 @@ export function createTajwid(host: TajwidHost) {
       chip.hidden = true;
     },
     prefetch(p: number) {
-      if (!on) return;
+      if (!onTajwid) return;
       void refPage(p);
       void waqfTable();
     },

@@ -595,7 +595,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     senseHint.textContent = t(name === "cetin" ? "sense.hint.cetin" : name === "sert" ? "sense.hint.sert" : "sense.hint.normal");
     moreBtn.classList.toggle("hard", name === "cetin");
     moreBtn.setAttribute("aria-label", t(name === "cetin" ? "set.titleHard" : "set.title"));
-    tj.set(name === "cetin");
+    tj.setMode({ tajwid: name === "cetin", letters: name === "sert" || name === "cetin" });
     if (name === "cetin") tj.prefetch(page);
     if (announce) {
       setStatus(() => t(name === "cetin" ? "sense.cetin" : name === "sert" ? "sense.sert" : "sense.normal"), () => senseHint.textContent || "");
