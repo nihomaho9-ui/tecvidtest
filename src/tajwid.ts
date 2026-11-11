@@ -38,18 +38,38 @@ const LABEL = (kind: string): string =>
   );
 const RING = 25 * 240; // 4 minutes of decoder frames
 
-function explain(x: Note): string {
-  if (x.kind === "waqf") return t(x.sub === "waqf-soft" ? "tj.waqfSoft" : "tj.waqf");
-  const h = t(x.r < 1.35 ? "tj.heard2" : "tj.heardShort");
-  if (x.type === "long") return t("tj.long");
-  if (x.sub === "madd6") return t("tj.lazim", { h });
-  if (x.type === "munfasil") return t("tj.munfasil", { h });
-  if (x.type === "muttasil") return t("tj.muttasil", { h });
-  if (x.kind === "madd") return t("tj.madd", { h });
-  if (x.sub === "qalqala-mid") return t("tj.qmid");
-  if (x.kind === "qalqala") return t("tj.qfinal");
-  if (x.kind === "ghunna") return t("tj.ghunna");
-  return t("tj.ikhfa");
+// Mark substituted for {w} so the Uthmani word can be inserted as a bidi-isolated span (Amiri Quran),
+// not mixed as plain text (which can look garbled in a Latin-script sentence).
+const WORD_MARK = "\uFFF0";
+
+function explain(x: Note, w = ""): string {
+  const vars = { h: "", w };
+  if (x.kind === "waqf") return t(x.sub === "waqf-soft" ? "tj.waqfSoft" : "tj.waqf", vars);
+  vars.h = t(x.r < 1.35 ? "tj.heard2" : "tj.heardShort");
+  if (x.type === "long") return t("tj.long", vars);
+  if (x.sub === "madd6") return t("tj.lazim", vars);
+  if (x.type === "munfasil") return t("tj.munfasil", vars);
+  if (x.type === "muttasil") return t("tj.muttasil", vars);
+  if (x.kind === "madd") return t("tj.madd", vars);
+  if (x.sub === "qalqala-mid") return t("tj.qmid", vars);
+  if (x.kind === "qalqala") return t("tj.qfinal", vars);
+  if (x.kind === "ghunna") return t("tj.ghunna", vars);
+  return t("tj.ikhfa", vars);
+}
+
+function appendExplain(el: HTMLElement, x: Note & { text: string }): void {
+  const bits = explain(x, WORD_MARK).split(WORD_MARK);
+  bits.forEach((bit, i) => {
+    if (i && x.text) {
+      const w = document.createElement("span");
+      w.className = "tj-w";
+      w.dir = "rtl";
+      w.lang = "ar";
+      w.textContent = x.text;
+      el.append(w);
+    }
+    if (bit) el.append(bit);
+  });
 }
 
 export interface TajwidHost {
@@ -256,6 +276,7 @@ export function createTajwid(host: TajwidHost) {
     }
     stats.push(performance.now() - t0);
     const words = corpus.surahs[s - 1].ayahs[a - 1].w;
+    // words[i] = [QCF glyphs, phoneme spelling, Uthmani]. Only [2] is shown on the card.
     const list = issues.map((x) => ({ ...x, s, a, text: words[x.w]?.[2] ?? "" }));
     const prev = found.get(key);
     if (list.length) found.set(key, list);
@@ -390,7 +411,7 @@ export function createTajwid(host: TajwidHost) {
       const b = document.createElement("b");
       b.textContent = x.type === "long" ? t("tj.label.long") : x.sub === "waqf-soft" ? t("tj.label.waqfSoft") : LABEL(x.kind);
       const d = document.createElement("div");
-      d.textContent = explain(x);
+      appendExplain(d, x);
       mid.append(b, d);
       row.append(num, ar, mid);
       card.append(row);

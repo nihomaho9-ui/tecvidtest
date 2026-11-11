@@ -392,6 +392,7 @@ body { margin: 0; }
 .tj-mid { flex: 1; min-width: 0; }
 .tj-mid b { font-size: 14px; color: var(--tjc); }
 .tj-mid div { font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+.tj-w { font: 1.15em/1.5 "TjQuran", "Amiri Quran", "Noto Naskh Arabic", serif; font-weight: 400; color: var(--ink); unicode-bidi: isolate; direction: rtl; white-space: nowrap; padding-inline: 0.12em; }
 .tj-act { display: flex; gap: 8px; margin-top: 10px; }
 .tj-act button { flex: 1; border-radius: 12px; padding: 10px; font: 700 13px system-ui, sans-serif; border: 1px solid var(--line); background: var(--chip); color: var(--ink); }
 .tj-act button.pri { background: #1f4a3e; color: #fff; border-color: #1f4a3e; }
