@@ -1,0 +1,810 @@
+{
+  "folder": "sinaqstatiskasi",
+  "updatedAt": "2026-11-12 00:51:01 Asia/Riyadh",
+  "timezone": "Asia/Riyadh",
+  "app": "Quran Tasheeh",
+  "site": "https://quran.mushafuk.online/",
+  "model": {
+    "name": "Tilawa Zipformer",
+    "note": "Pretrained CTC model already in the app. The reciters listed here were not used to train it. Their recitations were used to build tajweed duration ranges and to measure checks."
+  },
+  "criterion": {
+    "falseAlarmNotWorseThanShipped": true,
+    "falseAlarmAtMostPctWhereAchievable": 1.5,
+    "detectionNotWorseThanHusary": true,
+    "unmetRulesStayOnHusary": true
+  },
+  "shipped": {
+    "letterChecks": true,
+    "letterChecksCommit": "9afec7dd15760211f569e8e93a7708497ea93501",
+    "letterChecksSw": "tecvid-shell-v15",
+    "letterChecksAt": "2026-11-11 22:21:02 Asia/Riyadh",
+    "durationBandRules": [],
+    "durationBandDataPrefix": 1,
+    "durationBandDataCommit": "fbcf25047573a92c33c7a4a175050a95a32d4f51",
+    "durationBandDataGhPages": "68d1d04ca76560548256b297fd6ff73131a6325c",
+    "durationBandDataSw": "tecvid-shell-v16",
+    "durationBandDataAt": "2026-11-11 22:55:31 Asia/Riyadh",
+    "bandModes": {},
+    "judgeBehaviourUnchangedUntilShip": true
+  },
+  "duration": {
+    "bandReciters": 32,
+    "excludedFromBand": [
+      "abdulbasit",
+      "abdulbasit_mj",
+      "juhaynee",
+      "alosman"
+    ],
+    "filterPolicy": "keep if meanQ >= 0.95 and poor-ayah rate <= 25%; drop ayahs with poor > 0.15 from the band",
+    "filterAfterFixOnSurahs1_36_67": {
+      "keep": 32,
+      "dropped": 0
+    },
+    "evalSet": "2:1-41, 18, 36; 9634 ayah-reciters; eval-clean.txt after filter fix",
+    "cleanFaBandLoo": {
+      "muttasil": {
+        "shipped": {
+          "pct": 2.9,
+          "hits": 67,
+          "n": 2273
+        },
+        "bestBand": {
+          "mode": "band-min",
+          "pct": 0.4,
+          "hits": 10,
+          "n": 2273
+        },
+        "status": "pending-detection"
+      },
+      "ikhfa": {
+        "shipped": {
+          "pct": 0.6,
+          "hits": 47,
+          "n": 7810
+        },
+        "bestBand": {
+          "mode": "band-min",
+          "pct": 0.1,
+          "hits": 7,
+          "n": 7810
+        },
+        "p10": {
+          "pct": 0.3,
+          "hits": 23,
+          "n": 7810
+        },
+        "status": "pending-detection"
+      },
+      "long": {
+        "shipped": {
+          "pct": 0.5,
+          "hits": 119,
+          "n": 25299
+        },
+        "bestBand": {
+          "mode": "band-min",
+          "pct": 0.1,
+          "hits": 18,
+          "n": 25299
+        },
+        "p10": {
+          "pct": 0.2,
+          "hits": 62,
+          "n": 25299
+        },
+        "status": "pending-detection"
+      },
+      "ghunna": {
+        "shipped": {
+          "pct": 1.4,
+          "hits": 98,
+          "n": 6965
+        },
+        "bandAllModes": {
+          "pct": 1.9,
+          "hits": 129,
+          "n": 6965
+        },
+        "status": "keep-husary-band-worse"
+      },
+      "munfasil": {
+        "shipped": {
+          "pct": 33.8,
+          "hits": 1721,
+          "n": 5098
+        },
+        "bestBand": {
+          "mode": "band-min",
+          "pct": 0.1,
+          "hits": 3,
+          "n": 5098
+        },
+        "p10": {
+          "pct": 0.8,
+          "hits": 42,
+          "n": 5098
+        },
+        "status": "do-not-ship-on-cetin-4"
+      },
+      "lazim": {
+        "status": "no-sites-in-eval-set"
+      }
+    },
+    "heldOutMunfasilRatiosBandLoo": {
+      "r_lt_0_8": {
+        "pct": 2.5,
+        "hits": 129,
+        "n": 5098
+      },
+      "r_lt_2_0": {
+        "pct": 40.5,
+        "hits": 2066,
+        "n": 5098
+      }
+    },
+    "munfasilDecision": "Keep Çətin munfasil=4 on the Husary/shipped path. Normal and Sərt do not check duration (already accept 2–5 harakat). The 34–37% clean FA is almost entirely qasr.",
+    "inject": {
+      "status": "pending",
+      "jobs": 34285,
+      "done": 150,
+      "asOf": "2026-11-12 00:51:01 Asia/Riyadh",
+      "note": "Rerun from scratch on the 32-reciter band. The old 1579 results scored on the 9-reciter band were not reused. No duration rule is SHIP yet."
+    }
+  },
+  "letters": {
+    "shippedPairs": [
+      "ء/ع",
+      "ح/ه",
+      "خ/ه",
+      "ق/ك",
+      "ت/ط",
+      "د/ض",
+      "س/ص",
+      "ث/س",
+      "ذ/ز",
+      "خ/غ",
+      "ز/ظ"
+    ],
+    "modes": {
+      "Sert": "letters only",
+      "Cetin": "duration tajwid + letters",
+      "Normal": "neither"
+    },
+    "cleanSet": {
+      "ayahs": 8243,
+      "reciters": 41,
+      "abdulbasitExcluded": true,
+      "failedAlign": "ahmed_neana-18-63",
+      "surahs": "1, 2:1-41, 18, 36, 67"
+    },
+    "withoutJuhaynee": {
+      "reciters": 40,
+      "ayahs": 7972,
+      "unionAyahFa": {
+        "pct": 1.71,
+        "hits": 136,
+        "n": 7972
+      }
+    },
+    "withJuhayneeUnionAyahFaPct": 2.41,
+    "pairs": [
+      {
+        "pair": "ء/ع",
+        "sites": 36098,
+        "siteFaPctWithoutJuhaynee": 0.07,
+        "siteFaPctWithJuhaynee": 0.16
+      },
+      {
+        "pair": "ح/ه",
+        "sites": 24309,
+        "siteFaPctWithoutJuhaynee": 0.01,
+        "siteFaPctWithJuhaynee": 0.07
+      },
+      {
+        "pair": "خ/ه",
+        "sites": 21706,
+        "siteFaPctWithoutJuhaynee": 0,
+        "siteFaPctWithJuhaynee": 0.01
+      },
+      {
+        "pair": "ق/ك",
+        "sites": 20644,
+        "siteFaPctWithoutJuhaynee": 0.13,
+        "siteFaPctWithJuhaynee": 0.16
+      },
+      {
+        "pair": "ت/ط",
+        "sites": 16957,
+        "siteFaPctWithoutJuhaynee": 0.38,
+        "siteFaPctWithJuhaynee": 0.4
+      },
+      {
+        "pair": "د/ض",
+        "sites": 10451,
+        "siteFaPctWithoutJuhaynee": 0,
+        "siteFaPctWithJuhaynee": 0
+      },
+      {
+        "pair": "س/ص",
+        "sites": 10165,
+        "siteFaPctWithoutJuhaynee": 0,
+        "siteFaPctWithJuhaynee": 0.07
+      },
+      {
+        "pair": "ث/س",
+        "sites": 9225,
+        "siteFaPctWithoutJuhaynee": 0.1,
+        "siteFaPctWithJuhaynee": 0.15
+      },
+      {
+        "pair": "ذ/ز",
+        "sites": 8902,
+        "siteFaPctWithoutJuhaynee": 0.07,
+        "siteFaPctWithJuhaynee": 0.1
+      },
+      {
+        "pair": "خ/غ",
+        "sites": 4672,
+        "siteFaPctWithoutJuhaynee": 0,
+        "siteFaPctWithJuhaynee": 0.02
+      },
+      {
+        "pair": "ز/ظ",
+        "sites": 3078,
+        "siteFaPctWithoutJuhaynee": 0,
+        "siteFaPctWithJuhaynee": 0
+      }
+    ],
+    "inContextDetection": "At LLR≤0, essentially 100% minus site FA for a complete sister swap in the same alignment window.",
+    "hijaiyah": {
+      "licence": "CC BY 4.0",
+      "scored": 573,
+      "of": 600,
+      "missingWavs": 27,
+      "crossDetectionLlrLe0Pct": {
+        "ت/ط": 69,
+        "ث/س": 73,
+        "ح/ه": 67,
+        "خ/غ": 73,
+        "خ/ه": 77,
+        "د/ض": 84,
+        "ذ/ز": 77,
+        "ز/ظ": 87,
+        "س/ص": 83,
+        "ق/ك": 88
+      },
+      "hamzaAynInvertedInIsolation": true,
+      "outOfDomainNote": "emit > -4 on only 12/573 isolated clips"
+    },
+    "qdatBench": {
+      "licence": "Apache-2.0",
+      "n": 159,
+      "qalqala": {
+        "errorN": 58,
+        "correctN": 101,
+        "detLlrLe0Pct": 0,
+        "detAtP15Pct": 19
+      },
+      "ghunna": {
+        "errorN": 41,
+        "correctN": 118,
+        "detLlrLe0Pct": 0,
+        "detAtP15Pct": 10
+      },
+      "ikhfa": {
+        "errorN": 94,
+        "correctN": 65,
+        "detLlrLe0Pct": 1.1,
+        "detAtP15Pct": 10
+      }
+    },
+    "heldBack": [
+      "qalqala-letter-gop",
+      "ghunna-letter-gop",
+      "ikhfa-letter-gop",
+      "extra-ghunna",
+      "dal-ta",
+      "tafkheem-tarqeeq-general"
+    ]
+  },
+  "gemini": {
+    "shipped": false,
+    "confirmedClips": 51,
+    "confirmedWrong": 32,
+    "confirmedCorrect": 19,
+    "wrongByFamily": {
+      "makhraj": 8,
+      "emphasis": 8,
+      "haraka": 5,
+      "madd": 4,
+      "ghunna": 3,
+      "letter_swap": 2,
+      "qalqala": 2
+    },
+    "wrongBySource": {
+      "alosman-demos": 20,
+      "swed-letter-errors": 12,
+      "swed-makharij-two-pass": 0
+    },
+    "models": [
+      "gemini-3.5-flash-lite",
+      "gemini-3.1-flash-lite"
+    ],
+    "gtAccuracy": {
+      "n": 20,
+      "falseAlarmOnOk": 0,
+      "detectionOnErrors": 0.1,
+      "presenceAccuracy": 0.55
+    },
+    "dalTa": {
+      "status": "held",
+      "confirmedDemoCaughtAtShipRule": false,
+      "faSnapshotPendingFullSet": {
+        "site": "1/9590",
+        "ayah": "1/2381",
+        "withoutJuhaynee": true,
+        "note": "1 and 2:1-41 complete when snapshotted; 18 underway; 36 and 67 pending. Later job count was still incomplete."
+      }
+    },
+    "writtenAt": "2026-11-11 23:46:25 Asia/Riyadh"
+  },
+  "lessons": {
+    "alosmanFatiha": {
+      "demonstratedErrorClasses": 15,
+      "caughtByShippedDurationJudgeAsIntended": 0,
+      "cleanFullAyahDurationFa": 0,
+      "cleanTalqinWordPathFa": {
+        "issues": 0,
+        "ayahs": 7
+      },
+      "reportWrittenAt": "2026-11-11 20:08 Asia/Riyadh",
+      "videoId": "EAmQhWceQNg"
+    },
+    "aymanSwed": {
+      "source": "https://archive.org/details/www.forsanhaq.com_2095",
+      "licenceOnItem": "unstated; research-only, not shipped in the app",
+      "makharijTwoPassConfirmed": 0,
+      "letterErrorsConfirmedWrongClips": 12
+    }
+  },
+  "audit": {
+    "commit": "84617bb8e2aa02d369ccb1d8b2d111ebbb019f05",
+    "at": "2026-11-11 20:26:42 Asia/Riyadh",
+    "sw": "tecvid-shell-v14",
+    "items": [
+      "lazy mushaf JSON",
+      "versioned model pack",
+      "offline shell",
+      "today stats",
+      "hifz",
+      "last page",
+      "clip persistence",
+      "mic resume",
+      "page buttons",
+      "a11y"
+    ],
+    "followUpCommit": "262f505d63cbd7a5c2cdfaa00f3e14620921d217",
+    "followUpAt": "2026-11-11 20:27:33 Asia/Riyadh",
+    "followUp": "Keep .nojekyll and NPL licence files in the Pages deploy"
+  },
+  "surahProgress": {
+    "asOf": "2026-11-12 00:51:01 Asia/Riyadh",
+    "order": "1-114 mushaf order, push after each completed prefix",
+    "lastShippedPrefix": 1,
+    "current": 2,
+    "doneLab": [
+      1,
+      36,
+      67
+    ],
+    "injectPending": true,
+    "surahs": [
+      {
+        "n": 1,
+        "nameAz": "Fatihə",
+        "ayahs": 7,
+        "measured": 224,
+        "need": 224,
+        "status": "shipped",
+        "sha": "fbcf25047573a92c33c7a4a175050a95a32d4f51",
+        "ghPages": "68d1d04ca76560548256b297fd6ff73131a6325c",
+        "sw": "tecvid-shell-v16",
+        "shippedAt": "2026-11-11 22:55:31 Asia/Riyadh"
+      },
+      {
+        "n": 2,
+        "nameAz": "əl-Bəqərə",
+        "ayahs": 286,
+        "measured": 6431,
+        "need": 9152,
+        "status": "measuring",
+        "knownMissingDownload": "abdul_kareem 2:56 HTTP 404"
+      },
+      {
+        "n": 18,
+        "nameAz": "əl-Kəhf",
+        "ayahs": 110,
+        "measured": 3519,
+        "need": 3520,
+        "status": "measured-in-val-set-not-marked-complete",
+        "missing": "ahmed_neana 18:63"
+      },
+      {
+        "n": 36,
+        "nameAz": "Yasin",
+        "ayahs": 83,
+        "measured": 2656,
+        "need": 2656,
+        "status": "measured-waiting-for-ordered-prefix"
+      },
+      {
+        "n": 67,
+        "nameAz": "əl-Mülk",
+        "ayahs": 30,
+        "measured": 960,
+        "need": 960,
+        "status": "measured-waiting-for-ordered-prefix"
+      }
+    ]
+  },
+  "reciters": [
+    {
+      "id": "husary",
+      "name": "Husary murattal",
+      "style": "murattal",
+      "role": "band-member-and-reference",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "alafasy",
+      "name": "Mishari al-Afasy",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "minshawi",
+      "name": "Minshawi murattal",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "ayyoub",
+      "name": "Muhammad Ayyoub",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "shaatre",
+      "name": "Abu Bakr al-Shatri",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "hudhaify",
+      "name": "Ali al-Hudhaify",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "shuraim",
+      "name": "Saud ash-Shuraim",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "sudais",
+      "name": "Abdur-Rahman as-Sudais",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "ajamy",
+      "name": "Ahmed al-Ajamy",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "banna",
+      "name": "Mahmoud Ali al-Banna",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "tablawi",
+      "name": "Mohamed al-Tablawi",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "maher",
+      "name": "Maher al-Muaiqly",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "matroud",
+      "name": "Abdullah Matroud",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "ali_jaber",
+      "name": "Ali Jaber",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "akhdar",
+      "name": "Ibrahim al-Akhdar",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "fares_abbad",
+      "name": "Fares Abbad",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "nasser_alqatami",
+      "name": "Nasser al-Qatami",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "yasser_dussary",
+      "name": "Yasser al-Dosari",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "salah_budair",
+      "name": "Salah al-Budair",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "sahl_yassin",
+      "name": "Sahl Yassin",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "bukhatir",
+      "name": "Salah Bukhatir",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "qahtaanee",
+      "name": "Khalid al-Qahtani",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "muhsin_qasim",
+      "name": "Muhsin al-Qasim",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "abdul_kareem",
+      "name": "Muhammad Abdul Kareem",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "ahmed_neana",
+      "name": "Ahmed Neana",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "ali_hajjaj",
+      "name": "Ali Hajjaj al-Suesy",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "ghamadi",
+      "name": "Saad al-Ghamdi",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "aziz_alili",
+      "name": "Aziz Alili",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "yaser_salamah",
+      "name": "Yaser Salamah",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "tunaiji",
+      "name": "Khalifa al-Tunaiji",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "akram",
+      "name": "Akram al-Alaqimy",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "nabil",
+      "name": "Nabil al-Rifai",
+      "style": "murattal",
+      "role": "band-member",
+      "bandFilter": "kept",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "abdulbasit",
+      "name": "Abdulbasit murattal",
+      "style": "murattal",
+      "role": "excluded-elongates-too-much",
+      "bandFilter": "not-in-band",
+      "source": "everyayah-catalogue",
+      "note": "User request: elongates too much. Held-elongated check only. Also excluded from letter clean set."
+    },
+    {
+      "id": "abdulbasit_mj",
+      "name": "Abdulbasit mujawwad",
+      "style": "mujawwad",
+      "role": "excluded-elongates-too-much",
+      "bandFilter": "not-in-band",
+      "source": "everyayah-catalogue",
+      "note": "Same reason as murattal. Held-mujawwad. Also excluded from letter clean set."
+    },
+    {
+      "id": "juhaynee",
+      "name": "Abdullah al-Juhaynee",
+      "style": "murattal",
+      "role": "dropped-poor-alignment",
+      "bandFilter": "not-in-32-band",
+      "source": "everyayah-catalogue",
+      "note": "Dropped at the Mulk quality gate for poor alignment. Used in letter checks, where he is an outlier."
+    },
+    {
+      "id": "alosman",
+      "name": "Abdulkader Al-Osman",
+      "style": "lesson-teacher",
+      "role": "lesson-teacher-youtube-blocked",
+      "bandFilter": "not-in-band",
+      "source": "everyayah-catalogue",
+      "note": "Intended band member; official YouTube audio could not be downloaded (HTTP 403 / bot-check). Used as a lesson teacher and in the 41-reciter letter cache."
+    },
+    {
+      "id": "jibreel",
+      "name": "Muhammad Jibreel",
+      "style": "murattal-qasr",
+      "role": "held-qasr",
+      "bandFilter": "held-out-by-design",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "rifai",
+      "name": "Hani ar-Rifai",
+      "style": "murattal-qasr",
+      "role": "held-qasr",
+      "bandFilter": "held-out-by-design",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "basfar",
+      "name": "Abdullah Basfar",
+      "style": "murattal-qasr",
+      "role": "held-qasr",
+      "bandFilter": "held-out-by-design",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "husarymj",
+      "name": "Husary mujawwad",
+      "style": "mujawwad",
+      "role": "held-mujawwad",
+      "bandFilter": "held-out-by-design",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "minshawi_mj",
+      "name": "Minshawi mujawwad",
+      "style": "mujawwad",
+      "role": "held-mujawwad",
+      "bandFilter": "held-out-by-design",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "mustafa_ismail",
+      "name": "Mustafa Ismail",
+      "style": "mujawwad",
+      "role": "held-mujawwad",
+      "bandFilter": "held-out-by-design",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "husary_muallim",
+      "name": "Husary muallim",
+      "style": "muallim",
+      "role": "held-muallim",
+      "bandFilter": "held-out-by-design",
+      "source": "everyayah-catalogue"
+    },
+    {
+      "id": "ayman_swed",
+      "name": "Ayman Rashdi Swed",
+      "style": "lesson-teacher",
+      "role": "lesson-teacher",
+      "bandFilter": "not-in-everyayah-catalogue",
+      "source": "archive.org / lab notes",
+      "note": "archive.org lessons, research-only (licence unstated on the item). Not used to build the duration band."
+    }
+  ]
+}
