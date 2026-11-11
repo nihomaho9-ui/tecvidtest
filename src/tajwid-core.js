@@ -160,6 +160,36 @@ export function maddType(at, i, mt) {
   return "other";
 }
 
+
+/** Read a ratio from ref.band: [[i, kind, min, p10, med, p90, max, n], ...]. */
+function bandRatio(R, i, key) {
+  const row = (R?.band || []).find((x) => x[0] === i);
+  if (!row || !(row[7] > 0)) return null;
+  const j = { min: 2, p10: 3, med: 4, p90: 5, max: 6 }[key];
+  const v = j == null ? null : row[j];
+  return v > 0 ? v : null;
+}
+
+/**
+ * Per-rule band mode used by the app. Unset rules stay on the Husary-only path.
+ * Filled only for rules that decide-val marked SHIP after full inject.
+ * opt.bandMode may still be a single string in lab scripts.
+ */
+export const BAND_MODES = {};
+
+function modeOf(opt, rule) {
+  const m = opt?.bandMode;
+  if (!m) return null;
+  if (typeof m === "string") return m;
+  return m[rule] || null;
+}
+function shortKeyOf(mode) {
+  return mode === "min" || mode === "p10" ? mode : mode === "median" ? "med" : null;
+}
+function longKeyOf(mode) {
+  return mode === "min" ? "max" : mode === "p10" ? "p90" : mode === "median" ? "med" : null;
+}
+
 /**
  * Tajwid issues of one recited ayah.
  * ref = the page JSON ayah ({tj: [[i, kind, husaryRatio]], all?: [[i, kind, r, ok, llr, final]], mt?: {i: f|t|l}}), or a bare tj list.
@@ -172,6 +202,7 @@ export function judge(m, ref, opt = {}) {
   const R = Array.isArray(ref) ? { tj: ref } : ref || null;
   const refMap = new Map((R?.tj || []).map((x) => [x[0], x]));
   const allMap = new Map((R?.all || []).map((x) => [x[0], x]));
+  const longKey = longKeyOf(modeOf(opt, "long"));
   const out = [];
   for (const x of m.rows) {
     const prev = m.rows[x.i - 1];
@@ -193,19 +224,29 @@ export function judge(m, ref, opt = {}) {
     }
     if (x.k === "madd2") {
       const L = RULES.long, h = allMap.get(x.i);
-      if (x.final || !(x.r > L.tr) || !opt.at || !opt.llr || !h || !h[3] || !(h[2] > 0)) continue;
+      let rRef = h && h[3] && h[2] > 0 ? h[2] : null;
+      if (longKey) {
+        const b = bandRatio(R, x.i, longKey);
+        if (b != null) rRef = b;
+      }
+      if (x.final || !(x.r > L.tr) || !opt.at || !opt.llr || !(rRef > 0)) continue;
       if (opt.at.wi[x.i + 1] !== opt.at.wi[x.i]) continue; // word end: a pause can stretch it legitimately
-      if (!(h[2] * L.q < x.r)) continue;
+      if (!(rRef * L.q < x.r)) continue;
       const l = opt.llr(x.i);
-      if (l > L.tl) out.push({ i: x.i, w: x.w, kind: "madd", sub: "madd2", type: "long", r: x.r, rRef: h[2], llr: l });
+      if (l > L.tl) out.push({ i: x.i, w: x.w, kind: "madd", sub: "madd2", type: "long", r: x.r, rRef, llr: l });
       continue;
     }
     if (!KINDS[x.k] || x.final || !(x.r > 0)) continue;
     const r0 = refMap.get(x.i);
-    if (R && !r0) continue; // Husary's own reading of this token was not usable
-    const rH = r0 ? r0[2] : null;
     if (x.k.startsWith("madd")) {
       const ty = x.k === "madd6" ? "lazim" : opt.at ? maddType(opt.at, x.i, R?.mt) : "muttasil";
+      const shortKey = shortKeyOf(modeOf(opt, ty));
+      let rH = r0 ? r0[2] : null;
+      if (shortKey) {
+        const b = bandRatio(R, x.i, shortKey);
+        if (b != null) rH = b;
+      } else if (R && !r0) continue;
+      if (shortKey && rH == null && R && !r0) continue;
       // Qasr (opt.munfasil === 2): munfasil at 2 counts is a valid reading, so never call it short. No "too long" flag
       // either: the reference reading (Husary) is 4–5 and holds every munfasil longer than qasr allows.
       if (ty === "munfasil" && opt.munfasil === 2) continue;
@@ -216,6 +257,13 @@ export function judge(m, ref, opt = {}) {
       out.push({ i: x.i, w: x.w, kind: "madd", sub: x.k, type: ty, r: x.r, rRef: rH });
       continue;
     }
+    const shortKey = shortKeyOf(modeOf(opt, x.k));
+    let rH = r0 ? r0[2] : null;
+    if (shortKey) {
+      const b = bandRatio(R, x.i, shortKey);
+      if (b != null) rH = b;
+    } else if (R && !r0) continue;
+    if (shortKey && rH == null && R && !r0) continue;
     const rule = RULES[x.k];
     if (!(x.r < rule.tr)) continue;
     if (x.k === "ikhfa" && rH != null && !(x.r < REL * rH)) continue; // ikhfa: also clearly shorter than Husary here (browser clean false flag)

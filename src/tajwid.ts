@@ -1,6 +1,6 @@
 // Çətin tajwid check (madd, ghunna, ikhfa, qalqala, waqf) plus Sərt/Çətin letter-pronunciation GOP.
 // Duration rules use Husary's page reference (public/tj/<page>.json). Letter flags do not need it.
-import { CLASSES, ayahTokens, alignAyah, measure, judge, setEquivalence, errorVariant, siteLLR, tokenClass, qprobeScore, findStops, WAQF, type TjIssue } from "./tajwid-core.js";
+import { CLASSES, ayahTokens, alignAyah, measure, judge, setEquivalence, errorVariant, siteLLR, tokenClass, qprobeScore, findStops, WAQF, type TjIssue , BAND_MODES } from "./tajwid-core.js";
 import QPROBE from "./tajwid-qprobe.json";
 import QMID from "./tajwid-qmid.json";
 import THRESHOLDS_JSON from "./letter-gop-thresholds.json";
@@ -9,6 +9,7 @@ const THRESHOLDS = THRESHOLDS_JSON as LetterThresholds;
 import { t } from "./i18n";
 
 type RefAyah = {
+  band?: [number, string, number, number, number, number, number, number][];
   s: number; a: number; url: string; seg: [number, number, number][]; tj: [number, string, number][]; q: number;
   all?: [number, string, number | null, number, number | null, number][]; mt?: Record<string, string>;
 };
@@ -285,7 +286,7 @@ export function createTajwid(host: TajwidHost) {
     const qprobe = enc && al ? (i: number): number => qprobeScore(enc, T, al.start[i], QPROBE as never) : undefined;
     const qmid = enc && al ? (i: number): number => qprobeScore(enc, T, al.start[i], QMID as never) : undefined;
     const issues: Note[] = [];
-    if (onTajwid && al && refAyah) issues.push(...judge(measure(al, at), refAyah, { llr, at, qprobe, qmid, munfasil }));
+    if (onTajwid && al && refAyah) issues.push(...judge(measure(al, at), refAyah, { llr, at, qprobe, qmid, munfasil, bandMode: BAND_MODES }));
     const table = onTajwid && al ? await waqfTable() : null;
     if (onTajwid && al && table) {
       // wrong stop: a pause mid-ayah where no waqf mark (or Husary's own pause) allows one
