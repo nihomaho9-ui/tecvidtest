@@ -166,16 +166,26 @@ function bandRatio(R, i, key) {
   const row = (R?.band || []).find((x) => x[0] === i);
   if (!row || !(row[7] > 0)) return null;
   const j = { min: 2, p10: 3, med: 4, p90: 5, max: 6 }[key];
-  const v = j == null ? null : row[j];
+  let v = null;
+  if (j != null) v = row[j];
+  else if (typeof key === "string" && key[0] === "p") v = row[8] ? row[8][key.slice(1)] : null;
   return v > 0 ? v : null;
 }
+/** "p<X>" with 0 < X < 50 (numeric, e.g. "p19.5"), else null. */
+function pctOf(mode) {
+  if (typeof mode !== "string" || !/^p\d+(\.\d+)?$/.test(mode)) return null;
+  const x = Number(mode.slice(1));
+  return x > 0 && x < 50 ? x : null;
+}
+/** Percentile key text as stored in band row ext (index 8): 19.5 → "19.5", 58 → "58". */
+export function bandPctKey(x) { return String(+x.toFixed(3)); }
 
 /**
  * Per-rule band mode used by the app. Unset rules stay on the Husary-only path.
  * Filled only for rules that decide-val marked SHIP after full inject.
  * opt.bandMode may still be a single string in lab scripts.
  */
-export const BAND_MODES = {};
+export const BAND_MODES = {"ikhfa":"p19.5","long":"p42"};
 
 function modeOf(opt, rule) {
   const m = opt?.bandMode;
@@ -184,10 +194,18 @@ function modeOf(opt, rule) {
   return m[rule] || null;
 }
 function shortKeyOf(mode) {
-  return mode === "min" || mode === "p10" ? mode : mode === "median" ? "med" : null;
+  if (mode === "min" || mode === "p10") return mode;
+  if (mode === "median") return "med";
+  const x = pctOf(mode);
+  return x == null ? null : `p${bandPctKey(x)}`;
 }
+// Long (too-long natural madd) mirrors the cut on the upper band: pX → p(100-X).
 function longKeyOf(mode) {
-  return mode === "min" ? "max" : mode === "p10" ? "p90" : mode === "median" ? "med" : null;
+  if (mode === "min") return "max";
+  if (mode === "p10") return "p90";
+  if (mode === "median") return "med";
+  const x = pctOf(mode);
+  return x == null ? null : `p${bandPctKey(100 - x)}`;
 }
 
 /**

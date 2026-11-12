@@ -9,7 +9,7 @@ const THRESHOLDS = THRESHOLDS_JSON as LetterThresholds;
 import { t } from "./i18n";
 
 type RefAyah = {
-  band?: [number, string, number, number, number, number, number, number][];
+  band?: [number, string, number, number, number, number, number, number, Record<string, number>?][];
   s: number; a: number; url: string; seg: [number, number, number][]; tj: [number, string, number][]; q: number;
   all?: [number, string, number | null, number, number | null, number][]; mt?: Record<string, string>;
 };

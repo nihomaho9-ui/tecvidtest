@@ -5,10 +5,11 @@ export interface Aligned { start: Int32Array; emit: Float32Array; from: number; 
 export interface Row { i: number; k: string; w: number; final: boolean; span: number; emit: number; r: number }
 export interface Measured { rows: Row[]; unit: number; uo: number; poor: number }
 export interface TjIssue { i: number; w: number; kind: "madd" | "ghunna" | "ikhfa" | "qalqala"; sub: string; type?: string; r: number; rRef: number | null; llr?: number }
-export type BandMode = "min" | "p10" | "median";
+export type BandMode = "min" | "p10" | "median" | `p${number}`;
 export type BandModes = Partial<Record<"muttasil" | "munfasil" | "lazim" | "ghunna" | "ikhfa" | "long", BandMode>>;
 export const BAND_MODES: BandModes;
-export interface RefAyahLike { tj: [number, string, number][]; all?: [number, string, number | null, number, number | null, number][]; mt?: Record<string, string>; band?: [number, string, number, number, number, number, number, number][] }
+export function bandPctKey(x: number): string;
+export interface RefAyahLike { tj: [number, string, number][]; all?: [number, string, number | null, number, number | null, number][]; mt?: Record<string, string>; band?: [number, string, number, number, number, number, number, number, Record<string, number>?][] }
 export const KINDS: Record<string, number>;
 export const REL: number;
 export function tokenClass(t: string): string;
