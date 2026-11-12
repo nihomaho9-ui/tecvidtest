@@ -12,6 +12,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -130,6 +131,25 @@ function injectDone(outDir) {
   return null;
 }
 
+
+function latestGhPagesSha(dir) {
+  const logp = path.join(dir, "pushes.log");
+  if (!fs.existsSync(logp)) return null;
+  let short = null;
+  for (const line of fs.readFileSync(logp, "utf8").split("\n")) {
+    const m = line.match(/pushed gh-pages\s+([0-9a-f]{7,40})/i);
+    if (m) short = m[1];
+  }
+  if (!short) return null;
+  for (const repo of ["/workspace/tecvidtest-gh-pages", path.join(path.dirname(dir), "../..")]) {
+    try {
+      const full = execFileSync("git", ["-C", repo, "rev-parse", short], { encoding: "utf8" }).trim();
+      if (/^[0-9a-f]{40}$/.test(full)) return full;
+    } catch {}
+  }
+  return short;
+}
+
 const outDir = argOut();
 const ayahDir = path.join(path.dirname(outDir), "ayah");
 const asOf = riyadhStamp();
@@ -159,12 +179,16 @@ function row(n, extra = {}) {
 }
 
 const shippedAt = toRiyadh(ship.at) || data.surahProgress?.surahs?.[0]?.shippedAt;
-const s1 = row(1, {
-  status: ship.lastShippedPrefix >= 1 ? "shipped" : "measured-waiting-for-ordered-prefix",
+const ghPages = latestGhPagesSha(outDir) || ship.ghPages || data.shipped?.durationBandDataGhPages;
+const shipMeta = {
   sha: ship.sha || data.shipped?.durationBandDataCommit,
-  ghPages: ship.ghPages || data.shipped?.durationBandDataGhPages,
+  ghPages,
   sw: ship.sw || data.shipped?.durationBandDataSw,
   shippedAt,
+};
+const s1 = row(1, {
+  status: ship.lastShippedPrefix >= 1 ? "shipped" : "measured-waiting-for-ordered-prefix",
+  ...(ship.lastShippedPrefix >= 1 ? shipMeta : {}),
 });
 const s2miss = counts.missing?.[2] || [];
 const known404 = s2miss.includes("abdul_kareem 2:56") ? "abdul_kareem 2:56 HTTP 404" : undefined;
@@ -173,7 +197,10 @@ const s2 = row(2, {
   ...(known404 ? { knownMissingDownload: known404 } : {}),
 });
 if (counts.available && s2.measured === s2.need) s2.status = "measured-waiting-for-ordered-prefix";
-if (ship.lastShippedPrefix >= 2) s2.status = "shipped";
+if (ship.lastShippedPrefix >= 2) {
+  s2.status = "shipped";
+  Object.assign(s2, shipMeta);
+}
 
 const s18miss = counts.missing?.[18] || [];
 const s18 = row(18, {
@@ -204,7 +231,7 @@ if (data.duration?.inject) {
 }
 if (ship.sha) {
   data.shipped.durationBandDataCommit = ship.sha;
-  data.shipped.durationBandDataGhPages = ship.ghPages || data.shipped.durationBandDataGhPages;
+  data.shipped.durationBandDataGhPages = ghPages || data.shipped.durationBandDataGhPages;
   data.shipped.durationBandDataSw = ship.sw || data.shipped.durationBandDataSw;
   data.shipped.durationBandDataAt = shippedAt || data.shipped.durationBandDataAt;
   data.shipped.durationBandDataPrefix = ship.lastShippedPrefix ?? data.shipped.durationBandDataPrefix;
@@ -222,7 +249,10 @@ const injLine =
     ? "Inject tutma sınağı: say gözləyir (inject.json oxunmadı)."
     : `Inject tutma sınağı: ${injJobs.toLocaleString("az-AZ").replace(/\./g, " ")} işdən ${injDone.toLocaleString("az-AZ").replace(/\./g, " ")}-si yazılıb (${injDone >= injJobs ? "bitib, decide-val gözləyə bilər" : "gözləyir"}). Ətraflı: [tecvid-muddet.md](tecvid-muddet.md).`;
 
-const shipRow = `| ${s1.status === "shipped" ? (ship.lastShippedPrefix || 1) + " / 114" : "—"} | 1 Fatihə | \`${s1.sha || "—"}\` | \`${s1.ghPages || "—"}\` | ${s1.sw || "—"} | ${s1.shippedAt ? azLong(s1.shippedAt) : "—"} | Yalnız zolaq məlumatı; \`BAND_MODES\` boşdursa hakimlər Hüsari yolundadır |`;
+const prefixN = ship.lastShippedPrefix || 0;
+const prefixNames = [];
+for (let n = 1; n <= prefixN; n++) prefixNames.push(`${n} ${NAMES_AZ[n] || n}`);
+const shipRow = `| ${s1.status === "shipped" ? prefixN + " / 114" : "—"} | ${prefixNames.join(", ") || "—"} | \`${shipMeta.sha || "—"}\` | \`${shipMeta.ghPages || "—"}\` | ${shipMeta.sw || "—"} | ${shipMeta.shippedAt ? azLong(shipMeta.shippedAt) : "—"} | Yalnız zolaq məlumatı; \`BAND_MODES\` boşdursa hakimlər Hüsari yolundadır |`;
 
 function statusLine(s) {
   const name = `${s.n} ${s.nameAz}`;
