@@ -1,5 +1,7 @@
 # Surə ardıcıllığı
 
+> Güncel vəziyyət və müddət hakimləri (ixfa p19.5, uzun məd p42, prefiks 3/114) üçün [davam.md](davam.md) oxuyun. Bu faylın bəzi köhnə cümlələri (məsələn «heç bir müddət qaydası SHIP deyil») tarixçədir.
+
 Mahirin göstərişi: Quranı **mushaf sırası ilə** (1-dən 114-ə) ölçmək və hər tamamlanan prefiksdən (1…N) sonra push etmək. Kiçik surələr birləşdirilə bilər. Dəqiqlik sürətdən üstündür.
 
 Zolaq məlumatı yüklənsə belə, müddət qaydası yalnız `decide-val` «SHIP» deyəndə açılır. 12 noyabr 2026, 00:51 (Ər-Riyad) etibarilə heç bir müddət qaydası SHIP deyil.

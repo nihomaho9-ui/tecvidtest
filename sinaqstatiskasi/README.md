@@ -1,5 +1,7 @@
 # Sınaq statistikası
 
+Davam etmək və ya başqa assistentə vermək üçün əvvəlcə **[davam.md](davam.md)** oxuyun.
+
 Bu qovluq Quran Tasheeh tətbiqinin keçirdiyi sınaq və yoxlamaların qeydidir. Rəqəmlər yalnız real laboratoriya hesabatlarından, jurnallardan və git tarixçəsindən götürülüb. Uydurulmuş rəqəm yoxdur. Hələ bitməyən işlər «gözləyir» kimi yazılıb.
 
 Bu qovluq tətbiqin yığılmasına (build) və `gh-pages` yerləşdirməsinə daxil deyil. Saytdakı davranış buradakı sənədlərə görə dəyişmir.
@@ -20,6 +22,7 @@ Orada hər qarinin tam adı, daxili kodu, üslubu (mürəttəl, mücəvvəd, mü
 
 | Fayl | Nə var |
 |------|--------|
+| [davam.md](davam.md) | **Başqa bot üçün:** nə görülüb, necə görülüb, indi haradayıq, necə davam etməli |
 | [qariler.md](qariler.md) | Sınaqda və hazırlıqda istifadə olunan bütün qarilər |
 | [tecvid-muddet.md](tecvid-muddet.md) | Çoxqarili müddət zolağı, yanlış xəbərdarlıqlar, munfəsil qərarı, inject sınağının vəziyyəti |
 | [herf-yoxlamalari.md](herf-yoxlamalari.md) | Sayta çıxarılan 11 hərf cütü, yanlış xəbərdarlıq və tutma, saxlanılan yoxlamalar |
