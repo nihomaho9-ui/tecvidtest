@@ -1,6 +1,6 @@
 {
   "folder": "sinaqstatiskasi",
-  "updatedAt": "2026-11-12 10:44:38 Asia/Riyadh",
+  "updatedAt": "2026-11-12 11:18:32 Asia/Riyadh",
   "timezone": "Asia/Riyadh",
   "app": "Quran Tasheeh",
   "site": "https://quran.mushafuk.online/",
@@ -20,11 +20,11 @@
     "letterChecksSw": "tecvid-shell-v15",
     "letterChecksAt": "2026-11-11 22:21:02 Asia/Riyadh",
     "durationBandRules": [],
-    "durationBandDataPrefix": 2,
-    "durationBandDataCommit": "f2015049759ed193fa69923086221b8a8868c6f2",
-    "durationBandDataGhPages": "2de6268c3bcb004aa22760e5564b99917c49d71a",
-    "durationBandDataSw": "tecvid-shell-v18",
-    "durationBandDataAt": "2026-11-12 07:26:42 Asia/Riyadh",
+    "durationBandDataPrefix": 3,
+    "durationBandDataCommit": "9422e7196ff2594712ab01a49367ae6b6e3785de",
+    "durationBandDataGhPages": "0b7b14f69176e872c8061fa968ebd905ce21671a",
+    "durationBandDataSw": "tecvid-shell-v19",
+    "durationBandDataAt": "2026-11-12 11:01:36 Asia/Riyadh",
     "bandModes": {},
     "judgeBehaviourUnchangedUntilShip": true
   },
@@ -148,7 +148,7 @@
       "status": "complete-awaiting-decide-val",
       "jobs": 34285,
       "done": 34285,
-      "asOf": "2026-11-12 10:44:38 Asia/Riyadh",
+      "asOf": "2026-11-12 11:18:32 Asia/Riyadh",
       "note": "Rerun from scratch on the 32-reciter band. The old 1579 results scored on the 9-reciter band were not reused. No duration rule is SHIP yet."
     }
   },
@@ -389,13 +389,14 @@
     "followUp": "Keep .nojekyll and NPL licence files in the Pages deploy"
   },
   "surahProgress": {
-    "asOf": "2026-11-12 10:44:38 Asia/Riyadh",
+    "asOf": "2026-11-12 11:18:32 Asia/Riyadh",
     "order": "1-114 mushaf order, push after each completed prefix",
-    "lastShippedPrefix": 2,
-    "current": 3,
+    "lastShippedPrefix": 3,
+    "current": 4,
     "doneLab": [
       1,
       2,
+      3,
       36,
       67
     ],
@@ -408,10 +409,10 @@
         "measured": 224,
         "need": 224,
         "status": "shipped",
-        "sha": "f2015049759ed193fa69923086221b8a8868c6f2",
-        "ghPages": "2de6268c3bcb004aa22760e5564b99917c49d71a",
-        "sw": "tecvid-shell-v18",
-        "shippedAt": "2026-11-12 07:26:42 Asia/Riyadh"
+        "sha": "9422e7196ff2594712ab01a49367ae6b6e3785de",
+        "ghPages": "0b7b14f69176e872c8061fa968ebd905ce21671a",
+        "sw": "tecvid-shell-v19",
+        "shippedAt": "2026-11-12 11:01:36 Asia/Riyadh"
       },
       {
         "n": 2,
@@ -421,10 +422,10 @@
         "need": 9152,
         "status": "shipped",
         "knownMissingDownload": "abdul_kareem 2:56 HTTP 404",
-        "sha": "f2015049759ed193fa69923086221b8a8868c6f2",
-        "ghPages": "2de6268c3bcb004aa22760e5564b99917c49d71a",
-        "sw": "tecvid-shell-v18",
-        "shippedAt": "2026-11-12 07:26:42 Asia/Riyadh"
+        "sha": "9422e7196ff2594712ab01a49367ae6b6e3785de",
+        "ghPages": "0b7b14f69176e872c8061fa968ebd905ce21671a",
+        "sw": "tecvid-shell-v19",
+        "shippedAt": "2026-11-12 11:01:36 Asia/Riyadh"
       },
       {
         "n": 18,
