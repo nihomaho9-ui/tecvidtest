@@ -1,6 +1,6 @@
 {
   "folder": "sinaqstatiskasi",
-  "updatedAt": "2026-11-12 07:28:03 Asia/Riyadh",
+  "updatedAt": "2026-11-12 10:44:38 Asia/Riyadh",
   "timezone": "Asia/Riyadh",
   "app": "Quran Tasheeh",
   "site": "https://quran.mushafuk.online/",
@@ -145,10 +145,10 @@
     },
     "munfasilDecision": "Keep Çətin munfasil=4 on the Husary/shipped path. Normal and Sərt do not check duration (already accept 2–5 harakat). The 34–37% clean FA is almost entirely qasr.",
     "inject": {
-      "status": "pending",
+      "status": "complete-awaiting-decide-val",
       "jobs": 34285,
-      "done": 13763,
-      "asOf": "2026-11-12 07:28:03 Asia/Riyadh",
+      "done": 34285,
+      "asOf": "2026-11-12 10:44:38 Asia/Riyadh",
       "note": "Rerun from scratch on the 32-reciter band. The old 1579 results scored on the 9-reciter band were not reused. No duration rule is SHIP yet."
     }
   },
@@ -389,7 +389,7 @@
     "followUp": "Keep .nojekyll and NPL licence files in the Pages deploy"
   },
   "surahProgress": {
-    "asOf": "2026-11-12 07:28:03 Asia/Riyadh",
+    "asOf": "2026-11-12 10:44:38 Asia/Riyadh",
     "order": "1-114 mushaf order, push after each completed prefix",
     "lastShippedPrefix": 2,
     "current": 3,
@@ -399,7 +399,7 @@
       36,
       67
     ],
-    "injectPending": true,
+    "injectPending": false,
     "surahs": [
       {
         "n": 1,

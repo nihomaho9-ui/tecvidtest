@@ -5,7 +5,7 @@ Mahirin göstərişi: Quranı **mushaf sırası ilə** (1-dən 114-ə) ölçmək
 Zolaq məlumatı yüklənsə belə, müddət qaydası yalnız `decide-val` «SHIP» deyəndə açılır. 12 noyabr 2026, 00:51 (Ər-Riyad) etibarilə heç bir müddət qaydası SHIP deyil.
 
 <!-- auto:start -->
-Yenilənmə: 12 noyabr 2026, 07:28 (Ər-Riyad vaxtı).
+Yenilənmə: 12 noyabr 2026, 10:44 (Ər-Riyad vaxtı).
 
 ## Sayta çıxarılan prefiks
 
@@ -29,7 +29,7 @@ Gözlənilən ölçü sayı = ayə sayı × 32.
 
 `progress.json` (laboratoriya): bitmiş elan olunanlar 1, 2, 36, 67; hazırda ölçülən **3**. 3–17, 19–35, 37–66 və 68–114 bu skriptin gördüyü ayə keşində yoxdursa, hələ ölçülməyib sayılır.
 
-Inject tutma sınağı: 34 285 işdən 13 763-si yazılıb (gözləyir). Ətraflı: [tecvid-muddet.md](tecvid-muddet.md).
+Inject tutma sınağı: 34 285 işdən 34 285-si yazılıb (bitib, decide-val gözləyə bilər). Ətraflı: [tecvid-muddet.md](tecvid-muddet.md).
 <!-- auto:end -->
 
 ## İlk ölçülən surələr haqqında
