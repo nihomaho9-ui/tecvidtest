@@ -1,6 +1,6 @@
 # Təcvid müddəti: çoxqarili zolaq
 
-Saytdakı Çətin təcvid yoxlaması hələ də **Hüsari mürəttəl** istinadı ilə işləyir (`public/tj/<səhifə>.json`). 32 qarilik zolaq məlumatı Fatihə üçün yüklənib, amma heç bir müddət qaydası hələ «SHIP» olunmayıb. Qayda meyarlardan keçəndən sonra `BAND_MODES` həmin qaydanı zolağa keçirəcək. Munfəsil bu qərara daxil olmayacaq (aşağıya baxın).
+Saytdakı Çətin təcvid yoxlamasında 12 noyabr 2026, 11:45-dən (Ər-Riyad) **iki qayda** 32 qarilik zolağa keçib: **ixfa** (zolaq p19,5) və **uzun səslər** (zolağın yuxarı p58 həddi, `p42` rejimi). `BAND_MODES = { ikhfa: "p19.5", long: "p42" }`. Müttəsil, ğunnə, munfəsil və lazım **Hüsari mürəttəl** istinadında qalır (`public/tj/<səhifə>.json`). Munfəsil bu qərara daxil deyil (aşağıya baxın).
 
 ## Necə qurulur
 
@@ -59,3 +59,16 @@ Süni qısaldılmış kliplərlə tutmanı ölçən sınaq 32 qari üzrə **yeni
 ## Saytda nə var
 
 Fatihə zolaq məlumatı 11 noyabr 2026, 22:54-də (Ər-Riyad) `main` `fbcf250` və `gh-pages` `68d1d04` ilə çıxarılıb, xidmət işçisi `tecvid-shell-v16`. `BAND_MODES` boşdur: hakimlər Hüsari yolundadır, davranış fərqi 0-dır. Yeni qayda yalnız inject və `decide-val` «SHIP» deyəndən sonra açılacaq.
+
+## Buraxılan zolaq qaydaları (12 noyabr 2026, 11:45, Ər-Riyad)
+
+Yoxlama: 2:1–41, 18, 36; təmiz oxunuşda yanlış xəbərdarlıq (band-loo) və 34 285 süni səhv sınağı. `decide-val` yalnız band-min, band-p10 və median üçün hesablanmışdı və heç bir qaydanı buraxmamışdı. Eyni nəticələr üzərində p0–p50 (0,5 addımla) hədləri yoxlanıldı; meyar dəyişmədi (yanlış xəbərdarlıq Hüsaridən pis deyil və ≤1,5%, tutma Hüsaridən pis deyil). Keçən aralığın kənarı yox, ehtiyatlı orta nöqtəsi seçildi.
+
+| Qayda | Hədd | Yanlış xəbərdarlıq | Tutma | Hüsari (əvvəl) |
+|---|---|---|---|---|
+| İxfa | p19,5 | 0,51% (40/7810) | 34,78% (329/946) | 0,67% (52/7810), 32,66% (309/946) |
+| Uzun səslər | p42 (yuxarı p58) | 0,71% (179/25299) | 22,58% (21/93) | 0,79% (200/25299), 22,58% (21/93) |
+
+Hüsaridə qalanlar: **müttəsil** (keçən hədd yoxdur: p6 1,50% (34/2273), amma tutma 2372/4540 < 2379; p6,5 tutma bəs edir, amma 37/2273 = 1,63%), **ğunnə** (ğunnə hakimi zolaq dəyərini müqayisə etmir; bütün hədlər 129/6965, Hüsari 116/6965), **munfəsil** (Çətin=4 Hüsaridə qalır), **lazım** (yoxlama dəstində nümunə yoxdur).
+
+Çıxış: `main` `ef297a0`, `gh-pages` `674211b`, xidmət işçisi `tecvid-shell-v20`. Səhifə zolaq sətirlərinə əlavə sütun (indeks 8) gəldi: ixfa üçün p19,5, uzun səslər üçün p58; ilk 8 sütun dəyişməyib.

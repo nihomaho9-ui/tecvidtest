@@ -1,6 +1,6 @@
 {
   "folder": "sinaqstatiskasi",
-  "updatedAt": "2026-11-12 11:18:32 Asia/Riyadh",
+  "updatedAt": "2026-11-12 11:45:55 Asia/Riyadh",
   "timezone": "Asia/Riyadh",
   "app": "Quran Tasheeh",
   "site": "https://quran.mushafuk.online/",
@@ -19,14 +19,24 @@
     "letterChecksCommit": "9afec7dd15760211f569e8e93a7708497ea93501",
     "letterChecksSw": "tecvid-shell-v15",
     "letterChecksAt": "2026-11-11 22:21:02 Asia/Riyadh",
-    "durationBandRules": [],
+    "durationBandRules": [
+      "ikhfa",
+      "long"
+    ],
     "durationBandDataPrefix": 3,
-    "durationBandDataCommit": "9422e7196ff2594712ab01a49367ae6b6e3785de",
-    "durationBandDataGhPages": "0b7b14f69176e872c8061fa968ebd905ce21671a",
-    "durationBandDataSw": "tecvid-shell-v19",
-    "durationBandDataAt": "2026-11-12 11:01:36 Asia/Riyadh",
-    "bandModes": {},
-    "judgeBehaviourUnchangedUntilShip": true
+    "durationBandDataCommit": "ef297a093d84d79a23251296b07e0910a67aca55",
+    "durationBandDataGhPages": "674211b91cdcc9bf08e80bd886a7b4b9432d5c7a",
+    "durationBandDataSw": "tecvid-shell-v20",
+    "durationBandDataAt": "2026-11-12 11:45:55 Asia/Riyadh",
+    "bandModes": {
+      "ikhfa": "p19.5",
+      "long": "p42"
+    },
+    "judgeBehaviourUnchangedUntilShip": false,
+    "durationBandRulesCommit": "ef297a093d84d79a23251296b07e0910a67aca55",
+    "durationBandRulesGhPages": "674211b91cdcc9bf08e80bd886a7b4b9432d5c7a",
+    "durationBandRulesSw": "tecvid-shell-v20",
+    "durationBandRulesAt": "2026-11-12 11:45:55 Asia/Riyadh"
   },
   "duration": {
     "bandReciters": 32,
@@ -74,7 +84,7 @@
           "hits": 23,
           "n": 7810
         },
-        "status": "pending-detection"
+        "status": "shipped-band-p19.5"
       },
       "long": {
         "shipped": {
@@ -93,7 +103,7 @@
           "hits": 62,
           "n": 25299
         },
-        "status": "pending-detection"
+        "status": "shipped-band-p42-upper-p58"
       },
       "ghunna": {
         "shipped": {
@@ -145,11 +155,78 @@
     },
     "munfasilDecision": "Keep Çətin munfasil=4 on the Husary/shipped path. Normal and Sərt do not check duration (already accept 2–5 harakat). The 34–37% clean FA is almost entirely qasr.",
     "inject": {
-      "status": "complete-awaiting-decide-val",
+      "status": "complete",
       "jobs": 34285,
       "done": 34285,
-      "asOf": "2026-11-12 11:18:32 Asia/Riyadh",
-      "note": "Rerun from scratch on the 32-reciter band. The old 1579 results scored on the 9-reciter band were not reused. No duration rule is SHIP yet."
+      "asOf": "2026-11-12 11:45:55 Asia/Riyadh",
+      "note": "Rerun from scratch on the 32-reciter band (34285/34285). decide-val (min/p10/median) shipped no rule; a finer percentile search on the same results found passing cuts for ikhfa and long only."
+    },
+    "bandShip": {
+      "at": "2026-11-12 11:45:55 Asia/Riyadh",
+      "approvedBy": "Mahir",
+      "bandModes": {
+        "ikhfa": "p19.5",
+        "long": "p42"
+      },
+      "method": "Validation 2:1-41, 18, 36, band-loo clean FA + 34285 inject results. Cuts p0..p50 in 0.5 steps; ikhfa reads band p19.5, long reads the upper band p58. Cautious cut chosen inside the passing range, not at its edge.",
+      "ikhfa": {
+        "cut": "p19.5",
+        "fa": {
+          "hits": 40,
+          "n": 7810,
+          "pct": 0.51
+        },
+        "det": {
+          "hits": 329,
+          "n": 946,
+          "pct": 34.78
+        },
+        "husaryFa": {
+          "hits": 52,
+          "n": 7810,
+          "pct": 0.67
+        },
+        "husaryDet": {
+          "hits": 309,
+          "n": 946,
+          "pct": 32.66
+        },
+        "passingRange": "p14-p24"
+      },
+      "long": {
+        "cut": "p42 (upper band p58)",
+        "fa": {
+          "hits": 179,
+          "n": 25299,
+          "pct": 0.71
+        },
+        "det": {
+          "hits": 21,
+          "n": 93,
+          "pct": 22.58
+        },
+        "husaryFa": {
+          "hits": 200,
+          "n": 25299,
+          "pct": 0.79
+        },
+        "husaryDet": {
+          "hits": 21,
+          "n": 93,
+          "pct": 22.58
+        },
+        "passingRange": "p37.5-p48.5",
+        "note": "detection equal to Husary, small n"
+      },
+      "stayOnHusary": {
+        "muttasil": "no passing cut (p6 FA 34/2273 but det 2372/4540 < 2379; p6.5 det ok but FA 37/2273 > 1.5%)",
+        "ghunna": "band value not used by the ghunna judge; all cuts FA 129/6965 > Husary 116",
+        "munfasil": "Çətin=4 stays on Husary",
+        "lazim": "no sites in the validation set"
+      },
+      "commit": "ef297a093d84d79a23251296b07e0910a67aca55",
+      "ghPages": "674211b91cdcc9bf08e80bd886a7b4b9432d5c7a",
+      "sw": "tecvid-shell-v20"
     }
   },
   "letters": {
