@@ -18,7 +18,7 @@ body { margin: 0; }
   direction: rtl;
   background: var(--paper);
   color: var(--ink);
-  font-family: "Source Sans 3", "Segoe UI", sans-serif;
+  font-family: "Source Sans 3", "Segoe UI", sans-serif, "TjQuran"; /* bundled Arabic glyphs as the last resort: no tofu without system Arabic fonts, no remote fonts */
 }
 .tartil.theme-white {
   --paper: #ffffff;
@@ -453,7 +453,7 @@ body { margin: 0; }
 .tartil.ui-rtl .tj-card,
 .tartil.ui-rtl .tj-chip { direction: rtl; }
 .tartil.ui-rtl .tj-card { text-align: right; }
-.tartil.ui-rtl .t-sheet-box { font-family: "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif; }
+.tartil.ui-rtl .t-sheet-box { font-family: "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif, "TjQuran"; }
 .tartil.ui-rtl .t-sheet-sub { letter-spacing: 0; }
 .t-lang { flex: none; height: 32px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip); padding: 0 10px; }
 .t-seg button { max-width: 9.5em; overflow: hidden; text-overflow: ellipsis; }

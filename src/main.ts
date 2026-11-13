@@ -514,6 +514,23 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     missBtn.setAttribute("aria-expanded", missBox.hidden ? "false" : "true");
     if (!missBox.hidden) paintMisses();
   });
+  // The list is a popover over the page: a tap anywhere outside it, or Esc, puts the page back.
+  const closeMiss = (): void => {
+    if (missBox.hidden) return;
+    missBox.hidden = true;
+    missBtn.setAttribute("aria-expanded", "false");
+  };
+  document.addEventListener(
+    "pointerdown",
+    (e) => {
+      const el = e.target as Node;
+      if (!missBox.hidden && !missBox.contains(el) && !missBtn.contains(el)) closeMiss();
+    },
+    true,
+  );
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMiss();
+  });
   need<HTMLButtonElement>(".t-miss-clear").addEventListener("click", () => {
     if (!misses.length && !strikes.size) return;
     if (!window.confirm(t("miss.clearConfirm"))) return;
