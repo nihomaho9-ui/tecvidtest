@@ -3,6 +3,8 @@ import { readFileSync, readdirSync, rmSync, writeFileSync, existsSync } from "no
 import { join } from "node:path";
 import { defineConfig } from "vite";
 
+const appVersion = JSON.parse(readFileSync("package.json", "utf8")).version as string;
+const buildDate = new Date().toISOString();
 const modelHash = createHash("sha256").update(readFileSync("public/model.onnx")).digest("hex").slice(0, 12);
 
 function shellAssetsPlugin() {
@@ -38,6 +40,8 @@ export default defineConfig({
   base: process.env.TARTIL_BASE ?? "./",
   define: {
     __MODEL_ID__: JSON.stringify(modelHash),
+    __APP_VERSION__: JSON.stringify(appVersion),
+    __BUILD_DATE__: JSON.stringify(buildDate),
   },
   build: {
     target: "es2022",

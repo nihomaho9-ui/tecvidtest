@@ -613,3 +613,130 @@ body { margin: 0; }
 .t-page.font-fail .w,
 .t-page.font-fail .basmala,
 .t-page.font-fail .snames { color: transparent; }
+
+/* First-launch tutorial card: flat cream panel with a gold edge, above the bottom bar. */
+.t-tour[hidden] { display: none; }
+.t-tour {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: calc(var(--t-bar-h, 80px) + 10px);
+  z-index: 35;
+  max-width: 500px;
+  margin: 0 auto;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--gold-line);
+  border-top: 3px solid var(--gold);
+  border-radius: 14px;
+  padding: 12px 14px 12px;
+  box-shadow: 0 10px 28px rgba(40, 24, 8, 0.14);
+  direction: ltr;
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+.tartil.ui-rtl .t-tour { direction: rtl; font-family: "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif, "TjQuran"; }
+.t-tour-dots { display: flex; gap: 5px; margin-bottom: 8px; }
+.t-tour-dots i { width: 18px; height: 3px; border-radius: 2px; background: var(--line); }
+.t-tour-dots i.on { background: var(--gold); }
+.t-tour-h { display: block; font-size: 16px; color: var(--green); margin-bottom: 4px; }
+.t-tour-b { margin: 0 0 10px; color: var(--ink); }
+.t-tour[data-step="3"] .t-tour-b { margin-bottom: 6px; font-size: 13.5px; }
+.t-tour-acts { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.t-tour-skip { border: 0; background: none; color: var(--muted); font-size: 14px; padding: 6px 2px; cursor: pointer; }
+.t-tour-next { border: 1px solid var(--green); background: var(--green); color: #fffaf0; border-radius: 999px; padding: 7px 18px; font-size: 14px; font-weight: 600; cursor: pointer; margin-inline-start: auto; }
+.tartil.theme-black .t-tour-next { background: #d5e0da; color: #111; border-color: #d5e0da; }
+.t-tour-next[hidden], .t-tour-skip[hidden] { display: none; }
+.tartil.tour-mic .t-mic { animation: t-tour-ring 1.6s ease-out infinite; }
+@keyframes t-tour-ring {
+  0% { box-shadow: 0 0 0 0 rgba(196, 163, 90, 0.7); }
+  70% { box-shadow: 0 0 0 12px rgba(196, 163, 90, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(196, 163, 90, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .tartil.tour-mic .t-mic { animation: none; outline: 3px solid var(--gold); } }
+
+/* About the app sheet. */
+.t-info-app { display: flex; align-items: center; gap: 12px; padding: 8px 0 4px; }
+.t-info-app img { border-radius: 10px; }
+.t-info-app b { display: block; font-size: 16px; color: var(--green); }
+.t-info-app small { color: var(--muted); font-size: 12.5px; }
+.t-kvs { display: grid; gap: 0; }
+.t-kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+.t-kv span { min-width: 0; overflow-wrap: anywhere; }
+.t-kv b { flex: none; font-weight: 600; font-variant-numeric: tabular-nums; }
+.t-kv-sum { border-bottom: 0; border-top: 1px solid var(--gold-line); margin-top: 2px; }
+.t-kv-sum span, .t-kv-sum b { color: var(--green); font-weight: 700; }
+.t-info-p { margin: 0 0 4px; font-size: 13.5px; color: var(--ink); line-height: 1.45; }
+.t-caches { margin-top: 6px; font-size: 13px; }
+.t-caches summary { cursor: pointer; color: var(--muted); padding: 4px 0; }
+.t-caches .t-kv { font-size: 12.5px; }
+.t-info-links { margin-top: 12px; }
+.t-info-links .t-act, a.t-act { display: flex; flex-direction: column; color: var(--ink); text-decoration: none; }
+.t-info-links small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.tartil .t-tour-next { color: #fffaf0; }
+.tartil.theme-black .t-tour-next { color: #111; }
+
+/* Home screen (variant A) and surah / juz index: full-screen panels over the reader. */
+.t-home[hidden], .t-index[hidden] { display: none; }
+.t-home, .t-index {
+  position: fixed;
+  inset: 0;
+  z-index: 32;
+  background: var(--paper);
+  color: var(--ink);
+  direction: ltr;
+  display: flex;
+  flex-direction: column;
+}
+.tartil.ui-rtl .t-home, .tartil.ui-rtl .t-index { direction: rtl; font-family: "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif, "TjQuran"; }
+.t-home { padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); overflow-y: auto; }
+.t-home-top { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px 8px; flex: none; }
+.tartil .t-hico { width: 40px; height: 40px; border: 0; background: transparent; color: var(--ink); display: grid; place-items: center; border-radius: 12px; cursor: pointer; padding: 0; }
+.t-hico svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.t-home-lang { position: relative; height: 32px; min-width: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; font: 600 13px/30px system-ui, sans-serif; letter-spacing: 0.02em; text-align: center; color: var(--ink); }
+.t-home-lang select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.t-home-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 230px; padding: 8px 28px; }
+.t-home-logo { width: 128px; height: 128px; border-radius: 32px; display: block; }
+.t-home h1 { margin: 18px 0 0; font-size: 28px; font-weight: 650; letter-spacing: -0.03em; color: var(--green); line-height: 1.1; }
+.t-home-ar { margin-top: 4px; font-family: "TjQuran", "Noto Naskh Arabic", serif; font-size: 19px; color: var(--gold); }
+.t-home-orn { width: 72px; height: 10px; margin-top: 14px; color: var(--gold); }
+.t-home-acts { flex: none; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 8px 28px 30px; }
+.tartil .t-home-cont { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 100%; max-width: 420px; min-height: 64px; padding: 12px 18px; border: 0; border-radius: 999px; background: var(--green); color: #fffaf0; cursor: pointer; }
+.tartil.theme-black .t-home-cont { background: #1c3d32; }
+.t-home-cont .k { font-size: 16.5px; font-weight: 700; }
+.t-home-cont .s { font-size: 13px; opacity: 0.86; min-height: 1em; }
+.t-home-micwrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.tartil .t-home-mic { width: 84px; height: 84px; border-radius: 50%; border: 0; background: #1c3d32; color: #fffaf0; display: grid; place-items: center; box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 60%, transparent); cursor: pointer; padding: 0; }
+.t-home-mic svg { width: 34px; height: 34px; fill: currentColor; }
+.t-home-cap { font-size: 13.5px; font-weight: 600; color: var(--green); }
+.t-home-stats { margin: 4px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+.t-home-stats:empty { display: none; }
+.tartil .t-home-link { border: 0; background: none; color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; padding: 4px 8px; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; }
+
+.t-ix-top { display: flex; align-items: center; gap: 8px; padding: calc(10px + env(safe-area-inset-top)) 12px 10px; flex: none; }
+.t-ix-logo { width: 40px; height: 40px; border-radius: 10px; }
+.t-ix-name { font-size: 19px; font-weight: 700; color: var(--green); flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-ix-tools { display: flex; gap: 8px; flex: none; }
+.tartil .t-rnd { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--gold-line); background: var(--paper); color: var(--green); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.tartil .t-rnd[aria-pressed="true"] { background: var(--green); color: var(--gold); border-color: var(--green); }
+.t-rnd svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 1.9; fill: none; stroke-linecap: round; }
+.tartil .t-ix-last { margin: 0 12px 10px; padding: 10px 14px; border: 1px solid var(--gold-line); border-radius: 12px; background: color-mix(in srgb, var(--gold) 10%, var(--paper)); color: var(--green); font-size: 14.5px; font-weight: 600; text-align: start; cursor: pointer; flex: none; }
+.t-ix-last:empty { display: none; }
+.t-ix-search[hidden] { display: none; }
+.t-ix-search { padding: 0 12px 10px; flex: none; }
+.t-ix-q { width: 100%; height: 40px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip); padding: 0 14px; font-size: 15px; }
+.t-ix-tabs { display: flex; flex: none; background: var(--green); }
+.tartil .t-ix-tab { flex: 1; border: 0; background: transparent; color: color-mix(in srgb, var(--gold) 80%, #fffaf0); font-size: 14.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 12px 6px 10px; border-bottom: 3px solid transparent; cursor: pointer; }
+.tartil .t-ix-tab[aria-selected="true"] { color: #fffaf0; border-bottom-color: var(--gold); }
+.tartil.ui-rtl .t-ix-tab { letter-spacing: 0; }
+.t-ix-list { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); }
+.t-ix-juz { display: flex; justify-content: space-between; padding: 10px 16px; background: color-mix(in srgb, var(--gold) 13%, var(--paper)); border-bottom: 1px solid var(--line); color: var(--green); font-size: 14.5px; cursor: pointer; }
+.tartil .t-ix-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 16px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); text-align: start; cursor: pointer; }
+.t-ix-row:active { background: var(--fresh); }
+.t-ix-row .n { flex: none; width: 30px; color: var(--muted); font-size: 16px; font-variant-numeric: tabular-nums; }
+.t-ix-row .m { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.t-ix-row .m b { font-size: 16.5px; font-weight: 700; color: var(--green); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-ix-row .m .ar { font-family: "TjQuran", "Noto Naskh Arabic", serif; font-weight: 400; color: var(--gold); font-size: 15px; margin-inline-start: 4px; }
+.t-ix-row .m small { font-size: 13px; color: var(--muted); }
+.t-ix-row .p { flex: none; color: var(--muted); font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.t-ix-none { padding: 20px 16px; color: var(--muted); text-align: center; }

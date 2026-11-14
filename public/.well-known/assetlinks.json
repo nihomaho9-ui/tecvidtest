@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "online.mushafuk.quran",
+      "sha256_cert_fingerprints": [
+        "CE:BF:BE:87:C7:DE:DF:A8:EB:92:9B:38:E5:09:52:45:AB:CE:E7:66:7F:F6:F8:7F:30:9C:0B:CF:15:6C:14:2F"
+      ]
+    }
+  }
+]

@@ -160,6 +160,61 @@ const D = {
   "st.feedErr": ["Səs emalında xəta oldu. Mikrofonu yenidən açın.", "Ses işlenirken bir hata oldu. Mikrofonu yeniden açın.", "Something went wrong while processing the audio. Turn the mic on again.", "حدث خطأ أثناء معالجة الصوت. شغّل الميكروفون مرة أخرى.", "Ошибка при обработке звука. Включите микрофон снова."],
   "font.fail": ["Bu səhifənin yazı tipi yüklənmədi. İnterneti yoxlayıb səhifəni yeniləyin.", "Bu sayfanın yazı tipi yüklenemedi. İnterneti kontrol edip sayfayı yenileyin.", "This page's font could not be loaded. Check your connection and refresh.", "تعذّر تحميل خط هذه الصفحة. تحقق من الاتصال ثم حدّث الصفحة.", "Не удалось загрузить шрифт этой страницы. Проверьте соединение и обновите страницу."],
   "tj.go": ["Davam et", "Devam et", "Continue", "متابعة", "Продолжить"],
+  "tour.replay": ["Təlimatı yenidən göstər", "Rehberi tekrar göster", "Replay the tutorial", "إعادة عرض الدليل", "Показать обучение снова"],
+  "tour.skip": ["Ötür", "Geç", "Skip", "تخطٍّ", "Пропустить"],
+  "tour.next": ["Növbəti", "İleri", "Next", "التالي", "Далее"],
+  "tour.go": ["Oxumağa başla", "Okumaya başla", "Start reading", "ابدأ القراءة", "Начать чтение"],
+  "tour.h1": ["Mikrofon", "Mikrofon", "The microphone", "الميكروفون", "Микрофон"],
+  "tour.b1": ["Aşağıdakı mikrofon düyməsinə basanda tətbiq oxuyuşunu dinləyir. Tanıma telefonun özündə işləyir, səs heç yerə göndərilmir. İlk dəfə model bir dəfəlik yüklənir (təxminən 85 MB).", "Aşağıdaki mikrofon düğmesine basınca uygulama okuyuşunu dinler. Tanıma telefonun kendisinde çalışır, ses hiçbir yere gönderilmez. İlk seferde model bir kez indirilir (yaklaşık 85 MB).", "Tap the mic button below and the app listens to your recitation. Recognition runs on your phone; your voice is not sent anywhere. The first time, the model downloads once (about 85 MB).", "اضغط زر الميكروفون في الأسفل فيستمع التطبيق إلى تلاوتك. يعمل التعرّف على هاتفك نفسه، ولا يُرسل صوتك إلى أي مكان. في المرة الأولى يُنزَّل النموذج مرة واحدة (نحو 85 ميغابايت).", "Нажмите кнопку микрофона внизу, и приложение будет слушать ваше чтение. Распознавание работает на самом телефоне, голос никуда не отправляется. В первый раз модель загружается один раз (около 85 МБ)."],
+  "tour.h2": ["Ayələr gizlənir", "Ayetler gizlenir", "Ayahs hide", "الآيات تختفي", "Аяты скрываются"],
+  "tour.b2": ["Mikrofon açılanda ayələr gizlənir. Hər sözü düz oxuduqca o söz ekranda yenidən görünür.", "Mikrofon açılınca ayetler gizlenir. Her kelimeyi doğru okudukça o kelime ekranda yeniden görünür.", "When the mic is on, the ayahs are hidden. Each word appears again as you recite it correctly.", "عند تشغيل الميكروفون تختفي الآيات، وتظهر كل كلمة من جديد عندما تقرؤها صحيحة.", "Когда микрофон включён, аяты скрыты. Каждое слово снова появляется, когда вы правильно его прочитали."],
+  "tour.h3": ["Xətalar", "Hatalar", "Mistakes", "الأخطاء", "Ошибки"],
+  "tour.b3": ["Səhv yer sözün altında rəngli xəttlə göstərilir: qırmızı — səhv və ya düşən söz, sarı — hərəkə, mavi — keçilən ayə. Hamısı yuxarıdakı «Xətalar» düyməsində toplanır.", "Hatalı yer kelimenin altında renkli çizgiyle gösterilir: kırmızı — yanlış veya atlanan kelime, sarı — hareke, mavi — atlanan ayet. Hepsi üstteki «Hatalar» düğmesinde toplanır.", "A mistake is underlined in colour: red — a wrong or missed word, yellow — a vowel, blue — a skipped ayah. They are all collected under the Mistakes button at the top.", "يُوضع تحت موضع الخطأ خطّ ملوّن: الأحمر لكلمة خاطئة أو ساقطة، والأصفر للحركة، والأزرق لآية متروكة. وتُجمع كلها في زر «الأخطاء» في الأعلى.", "Ошибка подчёркивается цветом: красный — неверное или пропущенное слово, жёлтый — огласовка, синий — пропущенный аят. Все они собираются под кнопкой «Ошибки» вверху."],
+  "tour.h4": ["Fatihə ilə məşq", "Fatiha ile alıştırma", "Practise with al-Fatiha", "تدرّب بسورة الفاتحة", "Практика с аль-Фатихой"],
+  "tour.b4": ["İndi mikrofona bas və Fatihə surəsini oxu. Sonuncu ayəni bitirəndə məşq tamamlanır.", "Şimdi mikrofona bas ve Fatiha suresini oku. Son ayeti bitirince alıştırma tamamlanır.", "Now tap the mic and recite Surah al-Fatiha. The practice ends when you finish the last ayah.", "اضغط الآن على الميكروفون واقرأ سورة الفاتحة. ينتهي التدريب عند إتمام الآية الأخيرة.", "Теперь нажмите на микрофон и прочитайте суру аль-Фатиха. Практика закончится, когда вы дочитаете последний аят."],
+  "tour.h5": ["Afərin!", "Tebrikler!", "Well done!", "أحسنت!", "Отлично!"],
+  "tour.b5": ["Fatihəni bitirdin. İndi istədiyin səhifəni oxuya bilərsən. Təlimatı ayarlardan yenidən aça bilərsən.", "Fatiha'yı bitirdin. Artık istediğin sayfayı okuyabilirsin. Rehberi ayarlardan tekrar açabilirsin.", "You finished al-Fatiha. Now you can read any page you like. You can replay this tutorial from Settings.", "أتممت الفاتحة. يمكنك الآن قراءة أي صفحة تشاء، ويمكنك إعادة هذا الدليل من الإعدادات.", "Вы дочитали аль-Фатиху. Теперь можно читать любую страницу. Обучение можно повторить в настройках."],
+  "about": ["Tətbiq haqqında", "Uygulama hakkında", "About the app", "عن التطبيق", "О приложении"],
+  "about.ver": ["Versiya", "Sürüm", "Version", "الإصدار", "Версия"],
+  "about.built": ["Yığılma tarixi", "Derleme tarihi", "Build date", "تاريخ البناء", "Дата сборки"],
+  "about.text": ["Məshəf səhifələri", "Mushaf sayfaları", "Mushaf pages", "صفحات المصحف", "Страницы мусхафа"],
+  "about.textV": ["15 sətirlik Mədinə məshəfi düzülüşü, Kral Fəhd Kompleksinin (KFGQPC) QCF2 səhifə şriftləri ilə; şriftlər mushafuk.online-dan yüklənir.", "15 satırlık Medine mushafı düzeni, Kral Fahd Kompleksi'nin (KFGQPC) QCF2 sayfa yazı tipleriyle; yazı tipleri mushafuk.online'dan yüklenir.", "15-line Madinah mushaf layout, drawn with the King Fahd Complex (KFGQPC) QCF2 page fonts, loaded from mushafuk.online.", "ترتيب مصحف المدينة ذي الخمسة عشر سطرًا، بخطوط صفحات QCF2 من مجمع الملك فهد (KFGQPC)، وتُحمَّل الخطوط من mushafuk.online.", "15-строчная вёрстка мединского мусхафа шрифтами страниц QCF2 Комплекса короля Фахда (KFGQPC); шрифты загружаются с mushafuk.online."],
+  "about.model": ["Səs tanıma modeli", "Ses tanıma modeli", "Speech model", "نموذج التعرّف على الصوت", "Модель распознавания"],
+  "about.modelV": ["Quran-Lab Zipformer modeli və fonem lüğəti (NPL-1.2, qeyri-kommersiya), @tilawa/core (MIT) və onnxruntime-web (MIT) ilə telefonda işləyir. Model ID: {id}.", "Quran-Lab Zipformer modeli ve fonem sözlüğü (NPL-1.2, ticari olmayan), @tilawa/core (MIT) ve onnxruntime-web (MIT) ile telefonda çalışır. Model kimliği: {id}.", "Quran-Lab Zipformer model and phoneme corpus (NPL-1.2, non-commercial), run on the phone with @tilawa/core (MIT) and onnxruntime-web (MIT). Model ID: {id}.", "نموذج Zipformer من Quran-Lab ومعجم الأصوات (رخصة NPL-1.2، غير تجارية)، يعمل على الهاتف عبر ‎@tilawa/core (MIT)‎ و onnxruntime-web (MIT). معرّف النموذج: {id}.", "Модель Zipformer от Quran-Lab и фонемный корпус (NPL-1.2, некоммерческая), работают на телефоне через @tilawa/core (MIT) и onnxruntime-web (MIT). ID модели: {id}."],
+  "about.store": ["Telefonda tutulan yer", "Telefonda kaplanan alan", "Storage on this device", "المساحة المستخدمة على الجهاز", "Место на устройстве"],
+  "about.calc": ["Hesablanır…", "Hesaplanıyor…", "Measuring…", "جارٍ الحساب…", "Подсчёт…"],
+  "about.sModel": ["Səs modeli", "Ses modeli", "Speech model", "نموذج الصوت", "Модель"],
+  "about.sEngine": ["Mühərrik (WASM)", "Motor (WASM)", "Engine (WASM)", "المحرّك (WASM)", "Движок (WASM)"],
+  "about.sLex": ["Fonem lüğəti", "Fonem sözlüğü", "Phoneme corpus", "معجم الأصوات", "Фонемный корпус"],
+  "about.sFonts": ["Məshəf şriftləri ({n})", "Mushaf yazı tipleri ({n})", "Mushaf fonts ({n})", "خطوط المصحف ({n})", "Шрифты мусхафа ({n})"],
+  "about.sPages": ["Səhifə məlumatı ({n})", "Sayfa verisi ({n})", "Page data ({n})", "بيانات الصفحات ({n})", "Данные страниц ({n})"],
+  "about.sApp": ["Tətbiq faylları", "Uygulama dosyaları", "App files", "ملفات التطبيق", "Файлы приложения"],
+  "about.sOther": ["Digər keş", "Diğer önbellek", "Other cache", "ذاكرة مؤقتة أخرى", "Прочий кэш"],
+  "about.sClips": ["Səs yazıların (IndexedDB)", "Ses kayıtların (IndexedDB)", "Your voice clips (IndexedDB)", "مقاطع صوتك (IndexedDB)", "Ваши аудиофрагменты (IndexedDB)"],
+  "about.sLocal": ["Ayarlar və tarixçə (localStorage)", "Ayarlar ve geçmiş (localStorage)", "Settings and history (localStorage)", "الإعدادات والسجل (localStorage)", "Настройки и история (localStorage)"],
+  "about.sTotal": ["Cəmi (brauzerin hesabı)", "Toplam (tarayıcı tahmini)", "Total (browser estimate)", "المجموع (تقدير المتصفح)", "Всего (оценка браузера)"],
+  "about.sCaches": ["Keşlər", "Önbellekler", "Caches", "الذاكرات المؤقتة", "Кэши"],
+  "about.none": ["Ölçmək mümkün olmadı.", "Ölçülemedi.", "Could not be measured.", "تعذّر القياس.", "Не удалось измерить."],
+  "about.privacy": ["Məxfilik siyasəti", "Gizlilik politikası", "Privacy policy", "سياسة الخصوصية", "Политика конфиденциальности"],
+  "about.site": ["Sayt", "Site", "Website", "الموقع", "Сайт"],
+  "about.contact": ["Əlaqə", "İletişim", "Contact", "التواصل", "Контакты"],
+  "home.title": ["Ana ekran", "Ana ekran", "Home", "الرئيسية", "Главный экран"],
+  "home.cont": ["Davam et", "Devam et", "Continue", "متابعة", "Продолжить"],
+  "home.contSub": ["{s} · səhifə {p}", "{s} · sayfa {p}", "{s} · page {p}", "{s} · الصفحة {p}", "{s} · стр. {p}"],
+  "home.start": ["Oxumağa başla", "Okumaya başla", "Start reciting", "ابدأ التلاوة", "Начать чтение"],
+  "home.lang": ["Dil", "Dil", "Language", "اللغة", "Язык"],
+  "idx.surahs": ["Surələr", "Sureler", "Surahs", "السور", "Суры"],
+  "idx.juzs": ["Cüzlər", "Cüzler", "Juz", "الأجزاء", "Джузы"],
+  "idx.juzN": ["Cüz {n}", "Cüz {n}", "Juz {n}", "الجزء {n}", "Джуз {n}"],
+  "idx.mak": ["Məkkə", "Mekke", "Meccan", "مكية", "Мекканская"],
+  "idx.mad": ["Mədinə", "Medine", "Medinan", "مدنية", "Мединская"],
+  "idx.ayahs": ["{n} ayə", "{n} ayet", "{n} ayahs", "آياتها {n}", "аятов: {n}"],
+  "idx.last": ["Son oxunan: {s} · səh. {p}", "Son okunan: {s} · s. {p}", "Last read: {s} · p. {p}", "آخر قراءة: {s} · ص {p}", "Последнее: {s} · стр. {p}"],
+  "idx.search": ["Surə axtar", "Sure ara", "Search surahs", "ابحث عن سورة", "Поиск суры"],
+  "idx.none": ["Heç nə tapılmadı.", "Sonuç yok.", "Nothing found.", "لا نتائج.", "Ничего не найдено."],
+  "idx.back": ["Geri", "Geri", "Back", "رجوع", "Назад"],
+  "idx.from": ["{s}, ayə {a}", "{s}, ayet {a}", "{s} {a}", "{s} {a}", "{s}, аят {a}"],
+  "idx.page": ["səh. {p}", "s. {p}", "p. {p}", "ص {p}", "стр. {p}"],
 } as const;
 export type Key = keyof typeof D;
 const SURAH: Record<Lang, readonly string[]> = {
@@ -207,6 +262,10 @@ export function t(key: Key, v?: Record<string, string | number>): string {
 }
 export function hasKey(key: string): key is Key {
   return key in D;
+}
+/** Arabic surah name (1-based), whatever the UI language. */
+export function surahNameAr(n: number): string {
+  return SURAH.ar[n - 1] ?? String(n);
 }
 /** Surah name in the UI language (1-based). */
 export function surahName(n: number): string {

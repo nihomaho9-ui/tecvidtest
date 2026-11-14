@@ -1,12 +1,12 @@
 {
   "name": "Quran Tasheeh",
   "short_name": "Quran Tasheeh",
-  "description": "Quranı öz telefonunda, mikrofonla izləyərək oxu.",
+  "description": "Quranı mikrofonla oxu: ayələr gizlənir, düz oxuduqca açılır; səhv və təcvid yoxlaması telefonda.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#faf8f1",
-  "theme_color": "#1c3d32",
+  "theme_color": "#fffaf0",
   "lang": "az",
   "icons": [
     {
@@ -27,5 +27,10 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "id": "./",
+  "categories": [
+    "education",
+    "books"
   ]
 }

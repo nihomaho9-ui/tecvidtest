@@ -1,6 +1,6 @@
 import "./tartil.css";
 import { createTajwid } from "./tajwid";
-import { LANGS, applyI18n, getLang, isRtl, onLang, setLang, surahName, t, type Lang } from "./i18n";
+import { LANGS, applyI18n, getLang, isRtl, onLang, setLang, surahName, surahNameAr, t, type Lang } from "./i18n";
 
 let delayMin = 400;
 let delayStep = 30;
@@ -138,6 +138,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   const pageOf = new Map<string, number>();
   const surahPage = new Map<number, number>();
   let page = 1;
+  let screen: "home" | "index" | "reader" = "reader";
   let pickedSurah = 0;
   let alive = true;
   let micOn = false;
@@ -189,6 +190,10 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         <div class="t-acts">
           <button type="button" class="t-act t-mine" hidden><span data-i18n="mine"></span> <small class="t-mine-p"></small></button>
           <button type="button" class="t-act t-back" hidden data-i18n="back"></button>
+          <button type="button" class="t-act t-homebtn" data-i18n="home.title"></button>
+          <button type="button" class="t-act t-tourbtn" data-i18n="tour.replay"></button>
+          <button type="button" class="t-act t-aboutbtn" data-i18n="about"></button>
+          <a class="t-act t-privlink" data-i18n="about.privacy"></a>
         </div>
         <p class="t-today"></p>
         <p class="t-about"><b>Quran Tasheeh</b> · <span data-i18n="foot"></span></p>
@@ -199,6 +204,12 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         <div class="t-sheet-h"><b data-i18n="nav.title"></b><button type="button" class="t-sheet-x t-nav-x" data-i18n="close"></button></div>
         <label class="t-set"><span data-i18n="nav.surah"></span><select class="t-surah" data-i18n-aria="nav.surah"></select></label>
         <form class="t-set t-goform"><span data-i18n="nav.page"></span><span class="t-go"><input class="t-pageno" type="number" min="1" max="604" inputmode="numeric" enterkeyhint="go" data-i18n-aria="nav.page" /><button type="submit" class="t-gobtn" data-i18n="nav.go"></button></span></form>
+      </div>
+    </div>
+    <div class="t-sheet t-aboutsheet" hidden>
+      <div class="t-sheet-box" role="dialog" aria-modal="true" data-i18n-aria="about">
+        <div class="t-sheet-h"><b data-i18n="about"></b><button type="button" class="t-sheet-x t-about-x" data-i18n="close"></button></div>
+        <div class="t-info"></div>
       </div>
     </div>
     <div class="t-pnum" aria-live="polite"></div>
@@ -224,6 +235,51 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     <div class="t-miss" hidden>
       <div class="t-miss-h"><b data-i18n="miss.title"></b><span><button type="button" class="t-miss-go" data-i18n="miss.fix"></button><button type="button" class="t-miss-clear" data-i18n="miss.clear"></button></span></div>
       <div class="t-miss-list"></div>
+    </div>
+    <section class="t-home" hidden>
+      <header class="t-home-top">
+        <button type="button" class="t-hico t-home-set" data-i18n-aria="set.title" data-i18n-title="set.title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <label class="t-home-lang"><span class="t-home-lang-k"></span><select class="t-home-langsel" data-i18n-aria="home.lang"></select></label>
+      </header>
+      <div class="t-home-hero">
+        <img class="t-home-logo" alt="" width="128" height="128" />
+        <h1>Quran Tasheeh</h1>
+        <div class="t-home-ar" lang="ar" dir="rtl">تصحيح القرآن</div>
+        <svg class="t-home-orn" viewBox="0 0 72 10" aria-hidden="true"><path d="M2 5h24M46 5h24" stroke="currentColor" stroke-width="1" fill="none"/><circle cx="36" cy="5" r="2.2" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+      </div>
+      <div class="t-home-acts">
+        <button type="button" class="t-home-cont"><span class="k" data-i18n="home.cont"></span><span class="s t-home-contsub"></span></button>
+        <div class="t-home-micwrap">
+          <button type="button" class="t-home-mic" data-i18n-aria="home.start"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg></button>
+          <div class="t-home-cap" data-i18n="home.start"></div>
+        </div>
+        <p class="t-home-stats"></p>
+        <button type="button" class="t-home-link t-home-tour" data-i18n="tour.replay"></button>
+      </div>
+    </section>
+    <section class="t-index" hidden>
+      <header class="t-ix-top">
+        <button type="button" class="t-hico t-ix-back" data-i18n-aria="idx.back" data-i18n-title="idx.back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <img class="t-ix-logo" alt="" width="40" height="40" />
+        <b class="t-ix-name">Quran Tasheeh</b>
+        <span class="t-ix-tools">
+          <button type="button" class="t-rnd t-ix-searchbtn" aria-pressed="false" data-i18n-aria="idx.search" data-i18n-title="idx.search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
+          <button type="button" class="t-rnd t-ix-set" data-i18n-aria="set.title" data-i18n-title="set.title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        </span>
+      </header>
+      <button type="button" class="t-ix-last"></button>
+      <div class="t-ix-search" hidden><input type="search" class="t-ix-q" enterkeyhint="search" autocomplete="off" data-i18n-aria="idx.search" /></div>
+      <div class="t-ix-tabs" role="tablist">
+        <button type="button" role="tab" class="t-ix-tab" data-tab="s" aria-selected="true" data-i18n="idx.surahs"></button>
+        <button type="button" role="tab" class="t-ix-tab" data-tab="j" aria-selected="false" data-i18n="idx.juzs"></button>
+      </div>
+      <div class="t-ix-list" role="list"></div>
+    </section>
+    <div class="t-tour" hidden role="dialog" aria-live="polite">
+      <div class="t-tour-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <b class="t-tour-h"></b>
+      <p class="t-tour-b"></p>
+      <div class="t-tour-acts"><button type="button" class="t-tour-skip" data-i18n="tour.skip"></button><button type="button" class="t-tour-next"></button></div>
     </div>
     <div class="t-sum" hidden>
       <div class="t-sum-h"><b data-i18n="sum.title"></b><button type="button" class="t-sum-ok" data-i18n="close"></button></div>
@@ -1461,6 +1517,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       const idx = Number(parts[2]);
       if (idx === total - 1) {
         tj.ayahDone(surah, ayah);
+        if (surah === 1 && ayah === 7) tourHit();
         if (surah === seqS && ayah === seqA) seqDone = true;
         noteAyah(surah, ayah);
         cutClip(surah, ayah);
@@ -2556,7 +2613,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   root.querySelector(".t-prev")?.addEventListener("click", () => go(page - 1));
   window.addEventListener("keydown", onKey);
   function onHash(): void {
-    if (!hashMode) return;
+    if (!hashMode || screen !== "reader") return;
     const n = Number((location.hash || "").replace("#", ""));
     if (n && Number.isFinite(n)) {
       if (clampPage(n) !== page) go(n);
@@ -2567,6 +2624,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   function onKey(ev: KeyboardEvent): void {
     const tg = ev.target as HTMLElement | null;
     if (tg && (tg.tagName === "INPUT" || tg.tagName === "SELECT" || tg.tagName === "TEXTAREA")) return;
+    if (screen !== "reader") return;
     if (ev.key === "ArrowLeft") go(page + 1);
     if (ev.key === "ArrowRight") go(page - 1);
   }
@@ -2678,7 +2736,510 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     page = clampPage(start);
     setStatus(() => t("st.read"), () => t("st.readSub"));
     await render();
+    if (!explicit && !tourSeen()) startTour();
+    else if ((screen as string) === "home") paintHome();
+    else if ((screen as string) === "index") {
+      paintHome();
+      paintIndex();
+    }
   })();
+  // First-launch tutorial: four short hints, then a practice run of al-Fatiha (page 1). Shown once; replay from Settings.
+  const TOUR_KEY = "tartil.tour";
+  const tourBox = need<HTMLElement>(".t-tour");
+  const tourH = need<HTMLElement>(".t-tour-h");
+  const tourB = need<HTMLElement>(".t-tour-b");
+  const tourNext = need<HTMLButtonElement>(".t-tour-next");
+  const tourSkip = need<HTMLButtonElement>(".t-tour-skip");
+  let tourOn = false;
+  let tourStep = 0;
+  let tourPrev = 0;
+  function tourSeen(): boolean {
+    try {
+      return localStorage.getItem(TOUR_KEY) === "1";
+    } catch {
+      return true;
+    }
+  }
+  function paintTour(): void {
+    root.classList.toggle("touring", tourOn);
+    root.classList.toggle("tour-mic", tourOn && (tourStep === 0 || tourStep === 3) && !root.classList.contains("mic"));
+    tourBox.hidden = !tourOn;
+    if (!tourOn) return;
+    const n = tourStep + 1;
+    tourH.textContent = t(`tour.h${n}` as Parameters<typeof t>[0]);
+    tourB.textContent = t(`tour.b${n}` as Parameters<typeof t>[0]);
+    tourBox.dataset.step = String(tourStep);
+    tourBox.querySelectorAll<HTMLElement>(".t-tour-dots i").forEach((dot, i) => dot.classList.toggle("on", i <= tourStep));
+    tourNext.hidden = tourStep === 3;
+    tourNext.textContent = tourStep === 4 ? t("tour.go") : t("tour.next");
+    tourSkip.hidden = tourStep === 4;
+  }
+  function startTour(): void {
+    closeSheet();
+    closeAbout();
+    showScreen("reader", false);
+    tourOn = true;
+    tourStep = 0;
+    tourPrev = page;
+    if (page !== 1) go(1);
+    paintTour();
+  }
+  function endTour(): void {
+    if (!tourOn) return;
+    tourOn = false;
+    try {
+      localStorage.setItem(TOUR_KEY, "1");
+    } catch {
+      /* ignore quota */
+    }
+    paintTour();
+    sumBox.hidden = true;
+    if (micOn) void stopMic().then(() => {
+      sumBox.hidden = true;
+    });
+    if (tourPrev && tourPrev !== page) go(tourPrev);
+    tourPrev = 0;
+    showScreen("home", false);
+  }
+  function tourHit(): void {
+    if (!tourOn || tourStep === 4) return;
+    tourStep = 4;
+    paintTour();
+  }
+  tourNext.addEventListener("click", () => {
+    if (tourStep >= 4) {
+      endTour();
+      return;
+    }
+    tourStep += 1;
+    if (tourStep === 3 && page !== 1) go(1);
+    paintTour();
+  });
+  tourSkip.addEventListener("click", () => endTour());
+  // Turning the mic on during the hints jumps straight to the Fatiha practice.
+  new MutationObserver(() => {
+    if (!tourOn) return;
+    if (root.classList.contains("mic") && tourStep < 3) tourStep = 3;
+    paintTour();
+  }).observe(root, { attributes: true, attributeFilter: ["class"] });
+  need<HTMLButtonElement>(".t-tourbtn").addEventListener("click", () => startTour());
+  onLang(paintTour);
+
+  // About the app: real values only (build-time version/date, measured storage).
+  const aboutSheet = need<HTMLElement>(".t-aboutsheet");
+  const aboutInfo = need<HTMLElement>(".t-info");
+  const privHref = asset("privacy/");
+  need<HTMLAnchorElement>(".t-privlink").href = privHref;
+  const SITE = "https://mushafuk.online/";
+  const MAIL = "nibrascode@gmail.com";
+  function fmtBytes(n: number): string {
+    if (!Number.isFinite(n) || n < 0) return "—";
+    if (n < 1024) return `${n} B`;
+    const units = ["KB", "MB", "GB"];
+    let v = n / 1024;
+    let u = 0;
+    while (v >= 1024 && u < units.length - 1) {
+      v /= 1024;
+      u += 1;
+    }
+    return `${v >= 100 ? v.toFixed(0) : v.toFixed(1)} ${units[u]}`;
+  }
+  type StoreSizes = {
+    model: number; wasm: number; corpus: number; fonts: number; fontsN: number; pages: number; pagesN: number; app: number; other: number;
+    perCache: [string, number][]; local: number; clips: number; usage: number | null; quota: number | null;
+  };
+  async function measureStorage(): Promise<StoreSizes> {
+    const z: StoreSizes = { model: 0, wasm: 0, corpus: 0, fonts: 0, fontsN: 0, pages: 0, pagesN: 0, app: 0, other: 0, perCache: [], local: 0, clips: 0, usage: null, quota: null };
+    if ("caches" in window) {
+      for (const name of await caches.keys()) {
+        const cache = await caches.open(name);
+        let sum = 0;
+        for (const req of await cache.keys()) {
+          const res = await cache.match(req);
+          if (!res) continue;
+          const size = (await res.blob()).size;
+          sum += size;
+          const url = req.url;
+          if (name.startsWith("tartil-model-") || name === "tartil-v1" || /\/model\.onnx(\?|$)/.test(url)) z.model += size;
+          else if (name === "tartil-wasm" || /\/ort\//.test(url)) z.wasm += size;
+          else if (name === "tartil-corpus" || /\/corpus\.json(\?|$)/.test(url)) z.corpus += size;
+          else if (url.startsWith(QCF)) {
+            z.fonts += size;
+            z.fontsN += 1;
+          } else if (/\/pg\/\d+\.json/.test(url)) {
+            z.pages += size;
+            z.pagesN += 1;
+          } else if (name.startsWith("tecvid-shell-")) z.app += size;
+          else z.other += size;
+        }
+        z.perCache.push([name, sum]);
+      }
+    }
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i) || "";
+        z.local += (k.length + (localStorage.getItem(k) || "").length) * 2;
+      }
+    } catch {
+      /* ignore */
+    }
+    const db = await openClipDb();
+    if (db) {
+      try {
+        const all = (await idbReq(db.transaction(CLIP_STORE, "readonly").objectStore(CLIP_STORE).getAll())) as ClipRec[];
+        z.clips = all.reduce((sum, row) => sum + (row.pcm?.byteLength ?? 0), 0);
+      } catch {
+        /* ignore */
+      }
+      db.close();
+    }
+    try {
+      const est = await navigator.storage?.estimate?.();
+      if (est) {
+        z.usage = est.usage ?? null;
+        z.quota = est.quota ?? null;
+      }
+    } catch {
+      /* ignore */
+    }
+    return z;
+  }
+  let lastSizes: StoreSizes | null = null;
+  function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+  function row(list: HTMLElement, label: string, value: string, strong = false): void {
+    const r = el("div", strong ? "t-kv t-kv-sum" : "t-kv");
+    r.append(el("span", "", label), el("b", "", value));
+    r.lastElementChild?.setAttribute("dir", "ltr");
+    list.appendChild(r);
+  }
+  function paintAbout(): void {
+    aboutInfo.textContent = "";
+    const built = new Date(__BUILD_DATE__);
+    const head = el("div", "t-info-app");
+    const ico = el("img");
+    ico.src = asset("icon-192.png");
+    ico.alt = "";
+    ico.width = 44;
+    ico.height = 44;
+    const names = el("div");
+    names.append(el("b", "", "Quran Tasheeh"), el("small", "", "quran.mushafuk.online"));
+    head.append(ico, names);
+    aboutInfo.appendChild(head);
+    const meta = el("div", "t-kvs");
+    row(meta, t("about.ver"), __APP_VERSION__);
+    row(meta, t("about.built"), Number.isNaN(built.getTime()) ? __BUILD_DATE__ : `${built.getFullYear()}-${String(built.getMonth() + 1).padStart(2, "0")}-${String(built.getDate()).padStart(2, "0")}`);
+    aboutInfo.appendChild(meta);
+    aboutInfo.append(el("p", "t-sheet-sub", t("about.text")), el("p", "t-info-p", t("about.textV")));
+    aboutInfo.append(el("p", "t-sheet-sub", t("about.model")), el("p", "t-info-p", t("about.modelV", { id: MODEL_ID })));
+    aboutInfo.appendChild(el("p", "t-sheet-sub", t("about.store")));
+    const store = el("div", "t-kvs");
+    const z = lastSizes;
+    if (!z) store.appendChild(el("p", "t-info-p", t("about.calc")));
+    else {
+      row(store, t("about.sModel"), fmtBytes(z.model));
+      row(store, t("about.sEngine"), fmtBytes(z.wasm));
+      row(store, t("about.sLex"), fmtBytes(z.corpus));
+      row(store, t("about.sFonts", { n: z.fontsN }), fmtBytes(z.fonts));
+      row(store, t("about.sPages", { n: z.pagesN }), fmtBytes(z.pages));
+      row(store, t("about.sApp"), fmtBytes(z.app));
+      if (z.other) row(store, t("about.sOther"), fmtBytes(z.other));
+      row(store, t("about.sClips"), fmtBytes(z.clips));
+      row(store, t("about.sLocal"), fmtBytes(z.local));
+      row(store, t("about.sTotal"), z.usage === null ? t("about.none") : fmtBytes(z.usage), true);
+      if (z.perCache.length) {
+        const det = el("details", "t-caches");
+        det.appendChild(el("summary", "", `${t("about.sCaches")} (${z.perCache.length})`));
+        for (const [name, size] of z.perCache) row(det, name, fmtBytes(size));
+        store.appendChild(det);
+      }
+    }
+    aboutInfo.appendChild(store);
+    const links = el("div", "t-acts t-info-links");
+    const mk = (href: string, label: string, sub: string) => {
+      const a = el("a", "t-act");
+      a.href = href;
+      a.append(el("span", "", label), el("small", "", sub));
+      if (/^https?:/.test(href) && !href.startsWith(new URL(asset("")).origin)) {
+        a.target = "_blank";
+        a.rel = "noopener";
+      }
+      links.appendChild(a);
+    };
+    mk(privHref, t("about.privacy"), new URL(privHref).host + new URL(privHref).pathname);
+    mk(SITE, t("about.site"), "mushafuk.online");
+    mk(`mailto:${MAIL}`, t("about.contact"), MAIL);
+    aboutInfo.appendChild(links);
+  }
+  async function refreshSizes(): Promise<void> {
+    try {
+      lastSizes = await measureStorage();
+    } catch {
+      lastSizes = null;
+    }
+    if (!aboutSheet.hidden) paintAbout();
+  }
+  function closeAbout(): void {
+    aboutSheet.hidden = true;
+  }
+  need<HTMLButtonElement>(".t-aboutbtn").addEventListener("click", () => {
+    closeSheet();
+    lastSizes = null;
+    paintAbout();
+    aboutSheet.hidden = false;
+    aboutSheet.querySelector<HTMLButtonElement>(".t-about-x")?.focus();
+    void refreshSizes();
+  });
+  aboutSheet.addEventListener("click", (e) => {
+    const tg = e.target as HTMLElement;
+    if (tg === aboutSheet || tg.closest(".t-about-x")) closeAbout();
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeAbout();
+    trapFocus(aboutSheet, e);
+  });
+  onLang(() => {
+    if (!aboutSheet.hidden) paintAbout();
+  });
+
+  // Home screen (variant A) and the surah / juz index. The reader stays mounted underneath.
+  const homeBox = need<HTMLElement>(".t-home");
+  const indexBox = need<HTMLElement>(".t-index");
+  const homeContSub = need<HTMLElement>(".t-home-contsub");
+  const homeStats = need<HTMLElement>(".t-home-stats");
+  const homeLangSel = need<HTMLSelectElement>(".t-home-langsel");
+  const homeLangK = need<HTMLElement>(".t-home-lang-k");
+  const ixList = need<HTMLElement>(".t-ix-list");
+  const ixLast = need<HTMLButtonElement>(".t-ix-last");
+  const ixSearch = need<HTMLElement>(".t-ix-search");
+  const ixQ = need<HTMLInputElement>(".t-ix-q");
+  const ixSearchBtn = need<HTMLButtonElement>(".t-ix-searchbtn");
+  need<HTMLImageElement>(".t-home-logo").src = asset("icon-512.png");
+  need<HTMLImageElement>(".t-ix-logo").src = asset("icon-192.png");
+  for (const l of LANGS) {
+    const opt = document.createElement("option");
+    opt.value = l.code;
+    opt.textContent = l.name;
+    opt.lang = l.code;
+    homeLangSel.appendChild(opt);
+  }
+  homeLangSel.addEventListener("change", () => {
+    const v = homeLangSel.value;
+    if (LANGS.some((l) => l.code === v)) setLang(v as Lang);
+  });
+  // Medinan surahs as classified in the Tanzil Quran metadata; all others are Meccan.
+  const MADANI = new Set([2, 3, 4, 5, 8, 9, 13, 22, 24, 33, 47, 48, 49, 55, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 76, 98, 99, 110]);
+  // First ayah of each juz (standard Hafs division); the page comes from the app's own page index.
+  const JUZ_START: [number, number][] = [[1, 1], [2, 142], [2, 253], [3, 93], [4, 24], [4, 148], [5, 82], [6, 111], [7, 88], [8, 41], [9, 93], [11, 6], [12, 53], [15, 1], [17, 1], [18, 75], [21, 1], [23, 1], [25, 21], [27, 56], [29, 46], [33, 31], [36, 28], [39, 32], [41, 47], [46, 1], [51, 31], [58, 1], [67, 1], [78, 1]];
+  let ixTab: "s" | "j" = "s";
+  const backStack: ("home" | "index" | "reader")[] = [];
+  function lastRead(): number {
+    try {
+      return clampPage(Number(localStorage.getItem("tartil.read") || "") || Number(localStorage.getItem("tartil.page") || "") || 1);
+    } catch {
+      return 1;
+    }
+  }
+  function surahOnPage(n: number): number {
+    const list = pages[n - 1];
+    if (!list?.length) return 1;
+    // The surah that starts on this page if any, otherwise the one running through it.
+    const starts = list.find((pair) => pair[1] === 1);
+    return (starts ?? list[0])[0] || 1;
+  }
+  function num(n: number): string {
+    return isRtl() ? n.toLocaleString("ar-EG", { useGrouping: false }) : String(n);
+  }
+  function paintHome(): void {
+    const p = lastRead();
+    homeContSub.textContent = pageOf.size ? t("home.contSub", { s: surahName(surahOnPage(p)), p: num(p) }) : "";
+    homeStats.textContent = todayEl.textContent || "";
+    homeLangSel.value = getLang();
+    homeLangK.textContent = getLang().toUpperCase();
+    ixLast.textContent = pageOf.size ? t("idx.last", { s: surahName(surahOnPage(p)), p: num(p) }) : "";
+  }
+  function fold(x: string): string {
+    return x.toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f\u064b-\u065f\u0670'’ʼ\-\s.]/g, "").replace(/ı/g, "i").replace(/ə/g, "e");
+  }
+  function ixRow(cls: string, a: string, b: string, sub: string, pg: number, ar?: string): HTMLButtonElement {
+    const r = document.createElement("button");
+    r.type = "button";
+    r.className = cls;
+    r.setAttribute("role", "listitem");
+    r.dataset.p = String(pg);
+    const n = document.createElement("span");
+    n.className = "n";
+    n.textContent = a;
+    const mid = document.createElement("span");
+    mid.className = "m";
+    const nm = document.createElement("b");
+    nm.textContent = b;
+    if (ar) {
+      const arEl = document.createElement("span");
+      arEl.className = "ar";
+      arEl.lang = "ar";
+      arEl.textContent = ar;
+      nm.append(" ", arEl);
+    }
+    const sm = document.createElement("small");
+    sm.textContent = sub;
+    mid.append(nm, sm);
+    const pe = document.createElement("span");
+    pe.className = "p";
+    pe.textContent = num(pg);
+    r.append(n, mid, pe);
+    return r;
+  }
+  function juzHead(j: number, pg: number): HTMLElement {
+    const h = document.createElement("div");
+    h.className = "t-ix-juz";
+    h.dataset.p = String(pg);
+    const a = document.createElement("b");
+    a.textContent = t("idx.juzN", { n: num(j) });
+    const b = document.createElement("b");
+    b.textContent = num(pg);
+    h.append(a, b);
+    return h;
+  }
+  function paintIndex(): void {
+    ixList.textContent = "";
+    indexBox.querySelectorAll<HTMLButtonElement>(".t-ix-tab").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === ixTab ? "true" : "false"));
+    if (!pageOf.size) return;
+    const q = fold(ixQ.value.trim());
+    const counts = pageIndex?.ayahs ?? [];
+    const juzPages = JUZ_START.map(([s, a]) => pageOf.get(`${s}:${a}`) ?? 1);
+    const frag = document.createDocumentFragment();
+    if (ixTab === "s") {
+      let nextJuz = 0;
+      let shown = 0;
+      for (let s = 1; s <= 114; s += 1) {
+        const pg = surahPage.get(s) ?? 1;
+        const local = surahName(s);
+        const ar = surahNameAr(s);
+        if (q && !fold(local).includes(q) && !fold(ar).includes(q) && String(s) !== q) continue;
+        if (!q) {
+          // Juz headers in reading order: every juz that begins on or before this surah's first page.
+          while (nextJuz < 30 && juzPages[nextJuz] <= pg) {
+            frag.appendChild(juzHead(nextJuz + 1, juzPages[nextJuz]));
+            nextJuz += 1;
+          }
+        }
+        const sub = `${MADANI.has(s) ? t("idx.mad") : t("idx.mak")} — ${t("idx.ayahs", { n: num(counts[s - 1] ?? 0) })}`;
+        frag.appendChild(ixRow("t-ix-row", num(s), local, sub, pg, getLang() === "ar" ? undefined : ar));
+        shown += 1;
+      }
+      if (!q) while (nextJuz < 30) {
+        frag.appendChild(juzHead(nextJuz + 1, juzPages[nextJuz]));
+        nextJuz += 1;
+      }
+      if (!shown) {
+        const none = document.createElement("p");
+        none.className = "t-ix-none";
+        none.textContent = t("idx.none");
+        frag.appendChild(none);
+      }
+    } else {
+      JUZ_START.forEach(([s, a], i) => {
+        frag.appendChild(ixRow("t-ix-row", num(i + 1), t("idx.juzN", { n: num(i + 1) }), t("idx.from", { s: surahName(s), a: num(a) }), juzPages[i]));
+      });
+    }
+    ixList.appendChild(frag);
+  }
+  function showScreen(next: "home" | "index" | "reader", push = true): void {
+    if (next === screen) {
+      if (next === "home") paintHome();
+      return;
+    }
+    if (push) {
+      backStack.push(screen);
+      try {
+        history.pushState({ tScreen: next }, "", location.href);
+      } catch {
+        /* ignore */
+      }
+    } else if (next === "home") backStack.length = 0;
+    screen = next;
+    homeBox.hidden = next !== "home";
+    indexBox.hidden = next !== "index";
+    root.classList.toggle("on-home", next !== "reader");
+    if (next === "home") paintHome();
+    if (next === "index") {
+      paintHome();
+      paintIndex();
+      ixList.scrollTop = 0;
+    }
+    if (next === "reader") {
+      fit();
+      if (hashMode) history.replaceState(history.state, "", `#${page}`);
+    }
+  }
+  window.addEventListener("popstate", () => {
+    if (!backStack.length) return;
+    const prev = backStack.pop() as "home" | "index" | "reader";
+    closeSheet();
+    closeAbout();
+    if (screen === "reader" && micOn) void stopMic();
+    showScreen(prev, false);
+  });
+  function openReader(p: number): void {
+    if (tourOn) return;
+    showScreen("reader");
+    if (clampPage(p) !== page) go(p);
+    else fit();
+  }
+  need<HTMLButtonElement>(".t-home-cont").addEventListener("click", () => showScreen("index"));
+  need<HTMLButtonElement>(".t-home-mic").addEventListener("click", () => {
+    openReader(lastRead());
+    void startMic();
+  });
+  need<HTMLButtonElement>(".t-home-tour").addEventListener("click", () => startTour());
+  const openSettings = () => moreBtn.click();
+  need<HTMLButtonElement>(".t-home-set").addEventListener("click", openSettings);
+  need<HTMLButtonElement>(".t-ix-set").addEventListener("click", openSettings);
+  need<HTMLButtonElement>(".t-ix-back").addEventListener("click", () => history.back());
+  need<HTMLButtonElement>(".t-homebtn").addEventListener("click", () => {
+    closeSheet();
+    if (micOn) void stopMic();
+    showScreen("home", false);
+  });
+  ixLast.addEventListener("click", () => openReader(lastRead()));
+  ixList.addEventListener("click", (e) => {
+    const row = (e.target as HTMLElement).closest<HTMLElement>("[data-p]");
+    if (row) openReader(Number(row.dataset.p));
+  });
+  indexBox.querySelectorAll<HTMLButtonElement>(".t-ix-tab").forEach((b) =>
+    b.addEventListener("click", () => {
+      ixTab = b.dataset.tab === "j" ? "j" : "s";
+      paintIndex();
+      ixList.scrollTop = 0;
+    }),
+  );
+  ixSearchBtn.addEventListener("click", () => {
+    const open = ixSearch.hidden;
+    ixSearch.hidden = !open;
+    ixSearchBtn.setAttribute("aria-pressed", open ? "true" : "false");
+    if (open) {
+      ixTab = "s";
+      ixQ.placeholder = t("idx.search");
+      ixQ.focus();
+    } else ixQ.value = "";
+    paintIndex();
+  });
+  ixQ.addEventListener("input", () => paintIndex());
+  if (!explicit && tourSeen()) showScreen("home", false);
+  onLang(() => {
+    ixQ.placeholder = t("idx.search");
+    if (screen === "home") paintHome();
+    if (screen === "index") {
+      paintHome();
+      paintIndex();
+    }
+  });
+
   const onResize = () => fit();
   window.addEventListener("resize", onResize);
   const barWatch = typeof ResizeObserver === "function" ? new ResizeObserver(() => fit()) : null;
