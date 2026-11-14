@@ -740,3 +740,4 @@ body { margin: 0; }
 .t-ix-row .m small { font-size: 13px; color: var(--muted); }
 .t-ix-row .p { flex: none; color: var(--muted); font-size: 14.5px; font-variant-numeric: tabular-nums; }
 .t-ix-none { padding: 20px 16px; color: var(--muted); text-align: center; }
+.tartil.ui-rtl .t-ix-back svg { transform: scaleX(-1); }

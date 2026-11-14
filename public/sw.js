@@ -1,4 +1,4 @@
-const SHELL = "tecvid-shell-v27";
+const SHELL = "tecvid-shell-v28";
 const FONTS = "https://mushafuk.online/yazi-fonts/";
 // Replaced at build time with the hashed JS/CSS filenames in dist/assets.
 const ASSETS = "__SHELL_ASSETS__";
