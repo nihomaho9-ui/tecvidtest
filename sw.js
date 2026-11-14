@@ -1,7 +1,7 @@
-const SHELL = "tecvid-shell-v26";
+const SHELL = "tecvid-shell-v27";
 const FONTS = "https://mushafuk.online/yazi-fonts/";
 // Replaced at build time with the hashed JS/CSS filenames in dist/assets.
-const ASSETS = ["./assets/index-F8GRNhZG.css","./assets/index-bFA2zxjx.js","./assets/ort.wasm.bundle.min-CWeRxo_A.js","./assets/rolldown-runtime-CEoa-xHZ.js","./assets/structural-index-KcQGXqV0.js"];
+const ASSETS = ["./assets/index-QpXdI0qk.css","./assets/index-SlHbY7rF.js","./assets/ort.wasm.bundle.min-CWeRxo_A.js","./assets/rolldown-runtime-CEoa-xHZ.js","./assets/structural-index-KcQGXqV0.js"];
 
 function shellList() {
   const base = self.registration.scope;
