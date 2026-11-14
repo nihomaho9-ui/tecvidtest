@@ -168,15 +168,6 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       <button type="button" class="t-more" aria-expanded="false" aria-haspopup="dialog" data-i18n-title="set.title">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
-      <div class="t-seg-nav" role="group" data-i18n-aria="nav.page">
-        <button type="button" class="t-ico t-turn t-prev" data-i18n-aria="nav.prev" data-i18n-title="nav.prev">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
-        </button>
-        <span class="t-seg-mid" aria-live="polite"></span>
-        <button type="button" class="t-ico t-turn t-next" data-i18n-aria="nav.next" data-i18n-title="nav.next">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
-        </button>
-      </div>
       <span class="t-bookwrap">
         <button type="button" class="t-ico t-surah-btn" aria-haspopup="dialog" aria-expanded="false" data-i18n-aria="nav.title" data-i18n-title="nav.title">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4z"/><path d="M5 4a3 3 0 0 0-3 3v13"/></svg>
@@ -215,11 +206,10 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     <main class="t-page" dir="rtl"></main>
     <p class="t-foot"><span data-i18n="foot"></span></p>
     <div class="t-bar">
-      <div class="t-grab" aria-hidden="true"></div>
       <div class="t-bar-row">
         <div class="t-status" aria-live="polite" aria-atomic="true">
           <div class="t-st-row">
-            <img class="t-logo" alt="" width="22" height="22" />
+            <img class="t-logo" alt="" width="18" height="18" />
             <b class="t-st"></b>
           </div>
           <span class="t-sub" hidden></span>
@@ -261,13 +251,10 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   const surahSel = need<HTMLSelectElement>(".t-surah");
   const pageInput = need<HTMLInputElement>(".t-pageno");
   const pnumEl = need<HTMLElement>(".t-pnum");
-  const pageNav = need<HTMLElement>(".t-seg-mid");
   // Page number as plain text under the page, like a printed mushaf (Arabic-Indic digits for the Arabic UI).
   function paintPageNo(): void {
     const n = Number(pageInput.value) || 0;
-    const label = n ? (isRtl() ? n.toLocaleString("ar-EG", { useGrouping: false }) : String(n)) : "";
-    pnumEl.textContent = label;
-    pageNav.textContent = label;
+    pnumEl.textContent = n ? (isRtl() ? n.toLocaleString("ar-EG", { useGrouping: false }) : String(n)) : "";
   }
   const pageEl = need<HTMLElement>(".t-page");
   const sheet = pageEl;
