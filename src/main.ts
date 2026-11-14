@@ -165,19 +165,24 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   root.className = "tartil";
   root.innerHTML = `
     <header class="t-top">
-      <button type="button" class="t-ico t-turn t-next" data-i18n-aria="nav.next" data-i18n-title="nav.next">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
-      </button>
-      <button type="button" class="t-ico t-surah-btn" aria-haspopup="dialog" aria-expanded="false" data-i18n-aria="nav.title" data-i18n-title="nav.title">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4z"/><path d="M5 4a3 3 0 0 0-3 3v13"/></svg>
-      </button>
-      <button type="button" class="t-missbtn" aria-expanded="false" data-i18n-aria="miss.btn">0</button>
-      <button type="button" class="t-ico t-turn t-prev" data-i18n-aria="nav.prev" data-i18n-title="nav.prev">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
-      </button>
       <button type="button" class="t-more" aria-expanded="false" aria-haspopup="dialog" data-i18n-title="set.title">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
+      <div class="t-seg-nav" role="group" data-i18n-aria="nav.page">
+        <button type="button" class="t-ico t-turn t-prev" data-i18n-aria="nav.prev" data-i18n-title="nav.prev">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <span class="t-seg-mid" aria-live="polite"></span>
+        <button type="button" class="t-ico t-turn t-next" data-i18n-aria="nav.next" data-i18n-title="nav.next">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+      <span class="t-bookwrap">
+        <button type="button" class="t-ico t-surah-btn" aria-haspopup="dialog" aria-expanded="false" data-i18n-aria="nav.title" data-i18n-title="nav.title">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4z"/><path d="M5 4a3 3 0 0 0-3 3v13"/></svg>
+        </button>
+        <button type="button" class="t-missbtn" aria-expanded="false" data-i18n-aria="miss.btn">0</button>
+      </span>
     </header>
     <div class="t-sheet" hidden>
       <div class="t-sheet-box" role="dialog" aria-modal="true" data-i18n-aria="set.title">
@@ -210,14 +215,20 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     <main class="t-page" dir="rtl"></main>
     <p class="t-foot"><span data-i18n="foot"></span></p>
     <div class="t-bar">
-      <button type="button" class="t-mic" aria-pressed="false" data-i18n-aria="mic">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
-      </button>
-      <div class="t-status" aria-live="polite" aria-atomic="true">
-        <b class="t-st"></b>
-        <span class="t-sub"></span>
-        <div class="t-load" aria-hidden="true"><i></i></div>
-        <div class="t-level" aria-hidden="true"><i></i></div>
+      <div class="t-grab" aria-hidden="true"></div>
+      <div class="t-bar-row">
+        <div class="t-status" aria-live="polite" aria-atomic="true">
+          <div class="t-st-row">
+            <img class="t-logo" alt="" width="22" height="22" />
+            <b class="t-st"></b>
+          </div>
+          <span class="t-sub" hidden></span>
+          <div class="t-load" aria-hidden="true"><i></i></div>
+          <div class="t-level" aria-hidden="true"><i></i></div>
+        </div>
+        <button type="button" class="t-mic" aria-pressed="false" data-i18n-aria="mic">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+        </button>
       </div>
     </div>
     <div class="t-miss" hidden>
@@ -250,10 +261,13 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   const surahSel = need<HTMLSelectElement>(".t-surah");
   const pageInput = need<HTMLInputElement>(".t-pageno");
   const pnumEl = need<HTMLElement>(".t-pnum");
+  const pageNav = need<HTMLElement>(".t-seg-mid");
   // Page number as plain text under the page, like a printed mushaf (Arabic-Indic digits for the Arabic UI).
   function paintPageNo(): void {
     const n = Number(pageInput.value) || 0;
-    pnumEl.textContent = n ? (isRtl() ? n.toLocaleString("ar-EG", { useGrouping: false }) : String(n)) : "";
+    const label = n ? (isRtl() ? n.toLocaleString("ar-EG", { useGrouping: false }) : String(n)) : "";
+    pnumEl.textContent = label;
+    pageNav.textContent = label;
   }
   const pageEl = need<HTMLElement>(".t-page");
   const sheet = pageEl;
@@ -269,6 +283,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   const micBtn = need<HTMLButtonElement>(".t-mic");
   const st = need<HTMLElement>(".t-st");
   const sub = need<HTMLElement>(".t-sub");
+  const logo = root.querySelector<HTMLImageElement>(".t-logo");
+  if (logo) logo.src = asset("icon-192.png");
   const loadBar = need<HTMLElement>(".t-load");
   const loadFill = need<HTMLElement>(".t-load i");
   const levelBar = need<HTMLElement>(".t-level");
@@ -996,18 +1012,24 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
   paintToday();
 
-  let liveSub = t("st.readSub");
+  let liveSub = "";
   let quietOn = false;
   // Status texts may be thunks so a language change can redraw the current status at once.
   type Txt = string | (() => string);
   let lastStatus: [Txt, Txt] = ["", ""];
+  // The long idle hint (st.readSub) is not shown on the compact bottom sheet.
+  function paintSub(text: string): void {
+    const shown = text && text !== t("st.readSub") ? text : "";
+    sub.textContent = shown;
+    sub.hidden = !shown;
+  }
   function setStatus(title: Txt, detail: Txt): void {
     lastStatus = [title, detail];
     const tx = typeof title === "function" ? title() : title;
     const dx = typeof detail === "function" ? detail() : detail;
     st.textContent = tx;
-    liveSub = dx;
-    if (!quietOn) sub.textContent = dx;
+    liveSub = dx === t("st.readSub") ? "" : dx;
+    if (!quietOn) paintSub(liveSub);
   }
   function redrawStatus(): void {
     setStatus(lastStatus[0], lastStatus[1]);
@@ -1972,7 +1994,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       const avg = calSum / Math.max(1, calN);
       if (avg < 0.012) {
         quietOn = true;
-        sub.textContent = t("lvl.close");
+        paintSub(t("lvl.close"));
       } else {
         const room = Math.min(12, Math.max(1, 0.08 / avg));
         try {
@@ -1984,7 +2006,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         quietOn = false;
         if (!retryKey) {
           liveSub = t("lvl.ok");
-          sub.textContent = liveSub;
+          paintSub(liveSub);
         }
       }
     }
@@ -1992,14 +2014,14 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       if (!quietSince) quietSince = now;
       if (!quietOn && now - quietSince > 1500) {
         quietOn = true;
-        sub.textContent = t("lvl.none");
+        paintSub(t("lvl.none"));
       }
       return;
     }
     quietSince = 0;
     if (quietOn && calDone) {
       quietOn = false;
-      sub.textContent = liveSub;
+      paintSub(liveSub);
     }
   }
 
