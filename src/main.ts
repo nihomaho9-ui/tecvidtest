@@ -196,7 +196,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
           <a class="t-act t-privlink" data-i18n="about.privacy"></a>
         </div>
         <p class="t-today"></p>
-        <p class="t-about"><b>Quran Tasheeh</b> · <span data-i18n="foot"></span></p>
+        <p class="t-about"><b>Tasheeh</b> · <span data-i18n="foot"></span></p>
       </div>
     </div>
     <div class="t-sheet t-nav" hidden>
@@ -243,8 +243,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       </header>
       <div class="t-home-hero">
         <img class="t-home-logo" alt="" width="128" height="128" />
-        <h1>Quran Tasheeh</h1>
-        <div class="t-home-ar" lang="ar" dir="rtl">تصحيح القرآن</div>
+        <h1>Tasheeh</h1>
         <svg class="t-home-orn" viewBox="0 0 72 10" aria-hidden="true"><path d="M2 5h24M46 5h24" stroke="currentColor" stroke-width="1" fill="none"/><circle cx="36" cy="5" r="2.2" fill="none" stroke="currentColor" stroke-width="1"/></svg>
       </div>
       <div class="t-home-acts">
@@ -261,7 +260,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       <header class="t-ix-top">
         <button type="button" class="t-hico t-ix-back" data-i18n-aria="idx.back" data-i18n-title="idx.back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
         <img class="t-ix-logo" alt="" width="40" height="40" />
-        <b class="t-ix-name">Quran Tasheeh</b>
+        <b class="t-ix-name">Tasheeh</b>
         <span class="t-ix-tools">
           <button type="button" class="t-rnd t-ix-searchbtn" aria-pressed="false" data-i18n-aria="idx.search" data-i18n-title="idx.search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
           <button type="button" class="t-rnd t-ix-set" data-i18n-aria="set.title" data-i18n-title="set.title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
@@ -310,7 +309,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   // Page number as plain text under the page, like a printed mushaf (Arabic-Indic digits for the Arabic UI).
   function paintPageNo(): void {
     const n = Number(pageInput.value) || 0;
-    pnumEl.textContent = n ? (isRtl() ? n.toLocaleString("ar-EG", { useGrouping: false }) : String(n)) : "";
+    pnumEl.textContent = n ? (getLang() === "ar" ? n.toLocaleString("ar-EG", { useGrouping: false }) : String(n)) : "";
   }
   const pageEl = need<HTMLElement>(".t-page");
   const sheet = pageEl;
@@ -2927,7 +2926,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     ico.width = 44;
     ico.height = 44;
     const names = el("div");
-    names.append(el("b", "", "Quran Tasheeh"), el("small", "", "quran.mushafuk.online"));
+    names.append(el("b", "", "Tasheeh"), el("small", "", "quran.mushafuk.online"));
     head.append(ico, names);
     aboutInfo.appendChild(head);
     const meta = el("div", "t-kvs");
@@ -3052,7 +3051,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     return (starts ?? list[0])[0] || 1;
   }
   function num(n: number): string {
-    return isRtl() ? n.toLocaleString("ar-EG", { useGrouping: false }) : String(n);
+    return getLang() === "ar" ? n.toLocaleString("ar-EG", { useGrouping: false }) : String(n);
   }
   function paintHome(): void {
     const p = lastRead();
@@ -3129,7 +3128,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
           }
         }
         const sub = `${MADANI.has(s) ? t("idx.mad") : t("idx.mak")} — ${t("idx.ayahs", { n: num(counts[s - 1] ?? 0) })}`;
-        frag.appendChild(ixRow("t-ix-row", num(s), local, sub, pg, getLang() === "ar" ? undefined : ar));
+        frag.appendChild(ixRow("t-ix-row", num(s), local, sub, pg, getLang() === "ar" || getLang() === "ur" ? undefined : ar));
         shown += 1;
       }
       if (!q) while (nextJuz < 30) {

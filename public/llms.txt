@@ -1,4 +1,4 @@
-# Quran Tasheeh
+# Tasheeh
 
 > Qurani mikrofonla oxuma səhifəsi. https://quran.mushafuk.online
 

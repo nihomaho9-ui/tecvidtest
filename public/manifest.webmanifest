@@ -1,6 +1,6 @@
 {
-  "name": "Quran Tasheeh",
-  "short_name": "Quran Tasheeh",
+  "name": "Tasheeh",
+  "short_name": "Tasheeh",
   "description": "Quranı mikrofonla oxu: ayələr gizlənir, düz oxuduqca açılır; səhv və təcvid yoxlaması telefonda.",
   "start_url": "./",
   "scope": "./",

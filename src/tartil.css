@@ -698,7 +698,6 @@ body { margin: 0; }
 .t-home-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 230px; padding: 8px 28px; }
 .t-home-logo { width: 128px; height: 128px; border-radius: 32px; display: block; }
 .t-home h1 { margin: 18px 0 0; font-size: 28px; font-weight: 650; letter-spacing: -0.03em; color: var(--green); line-height: 1.1; }
-.t-home-ar { margin-top: 4px; font-family: "TjQuran", "Noto Naskh Arabic", serif; font-size: 19px; color: var(--gold); }
 .t-home-orn { width: 72px; height: 10px; margin-top: 14px; color: var(--gold); }
 .t-home-acts { flex: none; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 8px 28px 30px; }
 .tartil .t-home-cont { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 100%; max-width: 420px; min-height: 64px; padding: 12px 18px; border: 0; border-radius: 999px; background: var(--green); color: #fffaf0; cursor: pointer; }
