@@ -1,4 +1,4 @@
-# Quran Tasheeh
+# Tasheeh
 
 > A recitation practice app at https://quran.mushafuk.online: read the Quran with a microphone and check mistakes and tajweed. Part of Mushafuk (https://mushafuk.online).
 
@@ -6,7 +6,7 @@ This host is a browser app (progressive web app). It is not a mushaf library and
 
 ## Start here
 
-- [Quran Tasheeh](https://quran.mushafuk.online/)
+- [Tasheeh](https://quran.mushafuk.online/)
 - [Madinah mushaf](https://mushafuk.online/)
 
 ## Languages
