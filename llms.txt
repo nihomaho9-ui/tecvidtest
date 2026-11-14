@@ -17,3 +17,4 @@ The app interface is Azerbaijani. The Quran text is Arabic.
 
 - [Sitemap](https://quran.mushafuk.online/sitemap.xml)
 - [robots.txt](https://quran.mushafuk.online/robots.txt)
+- [License](https://quran.mushafuk.online/LICENSE): All rights reserved. This covers Mushafuk's own work and compilation only. Quran text, translations and tafsirs remain under their authors' and publishers' rights (see Masadir / sources).
