@@ -1,0 +1,12 @@
+# Quran Tasheeh
+
+> Qurani mikrofonla oxuma səhifəsi. https://quran.mushafuk.online
+
+Bu sayt Mədinə mətnini səhifə-səhifə göstərir. Mikrofon açılanda ayələr gizlənir və oxuduqca görünür. Səhv və təcvid yoxlaması elə bu səhifədədir. Hədis və təfsir burada deyil.
+
+Mətn və təfsir indeksi: https://mushafuk.online/llms.txt
+
+## For machines
+
+- [robots.txt](https://quran.mushafuk.online/robots.txt)
+- The app is one page. There is no per-ayah URL on this host.
