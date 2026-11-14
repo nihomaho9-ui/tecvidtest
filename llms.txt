@@ -1,12 +1,19 @@
 # Quran Tasheeh
 
-> Qurani mikrofonla oxuma səhifəsi. https://quran.mushafuk.online
+> A recitation practice app at https://quran.mushafuk.online: read the Quran with a microphone and check mistakes and tajweed. Part of Mushafuk (https://mushafuk.online).
 
-Bu sayt Mədinə mətnini səhifə-səhifə göstərir. Mikrofon açılanda ayələr gizlənir və oxuduqca görünür. Səhv və təcvid yoxlaması elə bu səhifədədir. Hədis və təfsir burada deyil.
+This host is a browser app (progressive web app). It is not a mushaf library and it does not publish tafsir or translations. The Madinah mushaf and the other Mushafuk reading sites are at https://mushafuk.online/.
 
-Mətn və təfsir indeksi: https://mushafuk.online/llms.txt
+## Start here
+
+- [Quran Tasheeh](https://quran.mushafuk.online/)
+- [Madinah mushaf](https://mushafuk.online/)
+
+## Languages
+
+The app interface is Azerbaijani. The Quran text is Arabic.
 
 ## For machines
 
+- [Sitemap](https://quran.mushafuk.online/sitemap.xml)
 - [robots.txt](https://quran.mushafuk.online/robots.txt)
-- The app is one page. There is no per-ayah URL on this host.
