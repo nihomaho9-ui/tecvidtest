@@ -169,11 +169,16 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       <button type="button" class="t-more" aria-expanded="false" aria-haspopup="dialog" data-i18n-title="set.title">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
+      <span class="t-topr">
+      <button type="button" class="t-ico t-sw-btn" aria-pressed="false" data-i18n-aria="sw.toggle" data-i18n-title="sw.toggle">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1"/><path d="M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.9 0 3.6-.6 5-1.4"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+      </button>
       <span class="t-bookwrap">
         <button type="button" class="t-ico t-surah-btn" aria-haspopup="dialog" aria-expanded="false" data-i18n-aria="nav.title" data-i18n-title="nav.title">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4z"/><path d="M5 4a3 3 0 0 0-3 3v13"/></svg>
         </button>
         <button type="button" class="t-missbtn" aria-expanded="false" data-i18n-aria="miss.btn">0</button>
+      </span>
       </span>
     </header>
     <div class="t-sheet" hidden>
@@ -226,6 +231,17 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
           <span class="t-sub" hidden></span>
           <div class="t-load" aria-hidden="true"><i></i></div>
           <div class="t-level" aria-hidden="true"><i></i></div>
+        </div>
+        <div class="t-sw-ctl" hidden>
+          <button type="button" class="t-sw-b t-sw-next" data-i18n-aria="nav.next" data-i18n-title="nav.next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <button type="button" class="t-sw-b t-sw-prev" data-i18n-aria="nav.prev" data-i18n-title="nav.prev"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          <span class="t-sw-sep" aria-hidden="true"></span>
+          <button type="button" class="t-sw-b t-sw-spd" aria-haspopup="dialog" aria-expanded="false" data-i18n-title="sw.speed"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M10 2h4"/></svg><span class="t-sw-spdv"></span></button>
+          <button type="button" class="t-sw-b t-sw-play" aria-pressed="false"><svg class="t-sw-ip" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg><svg class="t-sw-ipa" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="5" width="4" height="14" rx="1"/><rect x="13.5" y="5" width="4" height="14" rx="1"/></svg></button>
+        </div>
+        <div class="t-sw-pop" role="dialog" data-i18n-aria="sw.speed" hidden>
+          <div class="t-sw-pop-h"><b data-i18n="sw.speed"></b><span data-i18n="sw.perWord"></span></div>
+          <div class="t-sw-opts"></div>
         </div>
         <button type="button" class="t-mic" aria-pressed="false" data-i18n-aria="mic">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
@@ -396,6 +412,21 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   let lastHeardS = 0;
   let lastHeardA = 0;
   let hifz = false;
+  // Silent review (səssiz təkrar): words hidden as thin lines, revealed by tap or one by one, no mic.
+  const SW_SPEEDS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5];
+  let silent = false;
+  let swSpeed = 1.5;
+  let swPlaying = false;
+  let swTimer = 0;
+  let swPage = 0;
+  const swOpen = new Set<string>();
+  try {
+    silent = localStorage.getItem("tartil.silent") === "1";
+    const v = Number(localStorage.getItem("tartil.silentSpeed"));
+    if (SW_SPEEDS.includes(v)) swSpeed = v;
+  } catch {
+    /* ignore */
+  }
   let queueOn = false;
   // The user's own voice: a rolling ring of mic audio, cut into one clip per finished ayah (kept in memory only).
   const CLIP_RING = 16000 * 90;
@@ -1333,6 +1364,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     paintFontFail(fontOk);
     const turned = pageInput.value !== String(n);
     if (pageFiles.has(n)) draw(n);
+    paintSilent(n);
     fit();
     if (turned && root.classList.contains("land")) window.scrollTo(0, 0);
     if (micOn || retryKey) applyShown();
@@ -2192,6 +2224,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
 
   async function startMic(): Promise<void> {
     if (opening || micOn) return;
+    // Silent review (no mic) and recitation do not mix: starting the mic turns silent review off.
+    if (silent) setSilent(false);
     opening = true;
     stopClip();
     try {
@@ -2607,6 +2641,196 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
     go(page + (dx > 0 ? 1 : -1));
   }, { passive: true });
+
+
+  // ---- Silent review (səssiz təkrar) ----
+  const swBtn = need<HTMLButtonElement>(".t-sw-btn");
+  const swCtl = need<HTMLElement>(".t-sw-ctl");
+  const swSpdBtn = need<HTMLButtonElement>(".t-sw-spd");
+  const swSpdVal = need<HTMLElement>(".t-sw-spdv");
+  const swPlayBtn = need<HTMLButtonElement>(".t-sw-play");
+  const swPop = need<HTMLElement>(".t-sw-pop");
+  const swOpts = need<HTMLElement>(".t-sw-opts");
+  function swFmt(v: number): string {
+    const n = getLang() === "ar" ? v.toLocaleString("ar-EG", { useGrouping: false }) : String(v);
+    return `${n}${t("sw.unit")}`;
+  }
+  /** Speed label as nodes: the number in its own left-to-right isolate so "1.5" never flips in RTL. */
+  function swLabel(el: HTMLElement, v: number): void {
+    const n = getLang() === "ar" ? v.toLocaleString("ar-EG", { useGrouping: false }) : String(v);
+    const num = document.createElement("bdi");
+    num.dir = "ltr";
+    num.textContent = n;
+    el.replaceChildren(num, document.createTextNode(t("sw.unit")));
+    el.dir = isRtl() ? "rtl" : "ltr";
+  }
+  function swWords(): HTMLElement[] {
+    return [...pageEl.querySelectorAll<HTMLElement>(".w")].filter((w) => !w.classList.contains("num"));
+  }
+  function swKey(w: HTMLElement, i: number): string {
+    return w.dataset.k || `#${i}`;
+  }
+  function paintSwControls(): void {
+    root.classList.toggle("silent", silent);
+    swBtn.classList.toggle("on", silent);
+    swBtn.setAttribute("aria-pressed", silent ? "true" : "false");
+    swCtl.hidden = !silent;
+    if (!silent) closeSwPop();
+    swLabel(swSpdVal, swSpeed);
+    swSpdBtn.setAttribute("aria-label", `${t("sw.speed")}: ${swFmt(swSpeed)}`);
+    swPlayBtn.classList.toggle("on", swPlaying);
+    swPlayBtn.setAttribute("aria-pressed", swPlaying ? "true" : "false");
+    const label = swPlaying ? t("sw.pause") : t("sw.play");
+    swPlayBtn.setAttribute("aria-label", label);
+    swPlayBtn.title = label;
+    swOpts.replaceChildren(
+      ...SW_SPEEDS.map((v) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.dataset.v = String(v);
+        swLabel(b, v);
+        b.setAttribute("aria-pressed", v === swSpeed ? "true" : "false");
+        return b;
+      }),
+    );
+  }
+  /** Mark hidden / revealed words of the drawn page; a new page starts fully hidden. */
+  function paintSilent(n: number): void {
+    if (n !== swPage) {
+      swOpen.clear();
+      swPage = n;
+    }
+    swWords().forEach((w, i) => {
+      w.classList.toggle("sw-on", swOpen.has(swKey(w, i)));
+      w.classList.remove("sw-fade");
+    });
+  }
+  function swStop(): void {
+    swPlaying = false;
+    window.clearTimeout(swTimer);
+    swTimer = 0;
+    paintSwControls();
+  }
+  function swTick(): void {
+    swTimer = 0;
+    if (!alive || !silent || !swPlaying) return;
+    const words = swWords();
+    const i = words.findIndex((w) => !w.classList.contains("sw-on"));
+    if (i < 0) {
+      swStop();
+      return;
+    }
+    const w = words[i]!;
+    swOpen.add(swKey(w, i));
+    w.classList.add("sw-on", "sw-fade");
+    if (words.slice(i + 1).every((x) => x.classList.contains("sw-on"))) {
+      swStop();
+      return;
+    }
+    swTimer = window.setTimeout(swTick, swSpeed * 1000);
+  }
+  function swStart(): void {
+    if (!silent) return;
+    const words = swWords();
+    if (words.length && words.every((w) => w.classList.contains("sw-on"))) {
+      // Whole page already open: start over from the top.
+      swOpen.clear();
+      words.forEach((w) => w.classList.remove("sw-on", "sw-fade"));
+    }
+    swPlaying = true;
+    paintSwControls();
+    window.clearTimeout(swTimer);
+    swTimer = window.setTimeout(swTick, 250);
+  }
+  function setSilent(on: boolean): void {
+    silent = on;
+    if (!on) swStop();
+    swOpen.clear();
+    swPage = page;
+    swWords().forEach((w) => w.classList.remove("sw-on", "sw-fade"));
+    try {
+      localStorage.setItem("tartil.silent", on ? "1" : "0");
+    } catch {
+      /* ignore quota */
+    }
+    paintSwControls();
+    fit();
+  }
+  function closeSwPop(): void {
+    if (swPop.hidden) return;
+    swPop.hidden = true;
+    swSpdBtn.setAttribute("aria-expanded", "false");
+  }
+  swBtn.addEventListener("click", () => {
+    if (!silent && (micOn || audioStop)) void stopMic();
+    setSilent(!silent);
+  });
+  pageEl.addEventListener("click", (ev) => {
+    if (!silent || micOn) return;
+    const w = (ev.target as HTMLElement).closest<HTMLElement>(".w");
+    if (!w || w.classList.contains("num") || !pageEl.contains(w)) return;
+    const words = swWords();
+    const key = swKey(w, words.indexOf(w));
+    const on = !w.classList.contains("sw-on");
+    w.classList.toggle("sw-on", on);
+    w.classList.remove("sw-fade");
+    if (on) swOpen.add(key);
+    else swOpen.delete(key);
+  });
+  need<HTMLButtonElement>(".t-sw-next").addEventListener("click", () => {
+    swStop();
+    go(page + 1);
+  });
+  need<HTMLButtonElement>(".t-sw-prev").addEventListener("click", () => {
+    swStop();
+    go(page - 1);
+  });
+  swPlayBtn.addEventListener("click", () => {
+    if (swPlaying) swStop();
+    else swStart();
+  });
+  swSpdBtn.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    const open = swPop.hidden;
+    swPop.hidden = !open;
+    swSpdBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) swOpts.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus();
+  });
+  swOpts.addEventListener("click", (ev) => {
+    const b = (ev.target as HTMLElement).closest<HTMLButtonElement>("button[data-v]");
+    if (!b) return;
+    const v = Number(b.dataset.v);
+    if (!SW_SPEEDS.includes(v)) return;
+    swSpeed = v;
+    try {
+      localStorage.setItem("tartil.silentSpeed", String(v));
+    } catch {
+      /* ignore quota */
+    }
+    closeSwPop();
+    paintSwControls();
+    if (swPlaying) {
+      window.clearTimeout(swTimer);
+      swTimer = window.setTimeout(swTick, swSpeed * 1000);
+    }
+    swSpdBtn.focus();
+  });
+  const onSwDocClick = (ev: MouseEvent) => {
+    if (swPop.hidden) return;
+    const tg = ev.target as Node;
+    if (swPop.contains(tg) || swSpdBtn.contains(tg)) return;
+    closeSwPop();
+  };
+  document.addEventListener("click", onSwDocClick);
+  const onSwKey = (ev: KeyboardEvent) => {
+    if (ev.key === "Escape" && !swPop.hidden) {
+      closeSwPop();
+      swSpdBtn.focus();
+    }
+  };
+  window.addEventListener("keydown", onSwKey);
+  onLang(() => paintSwControls());
+  paintSwControls();
 
   root.querySelector(".t-next")?.addEventListener("click", () => go(page + 1));
   root.querySelector(".t-prev")?.addEventListener("click", () => go(page - 1));
@@ -3267,6 +3491,9 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     window.removeEventListener("pageshow", onPageShow);
     window.removeEventListener("pagehide", onPageHide);
     clearTimers();
+    window.clearTimeout(swTimer);
+    document.removeEventListener("click", onSwDocClick);
+    window.removeEventListener("keydown", onSwKey);
     void wake?.release();
     if (micOn) void stopMic();
   };

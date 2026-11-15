@@ -15,6 +15,12 @@ export const LANGS: { code: Lang; name: string }[] = [
 const IDX: Record<Lang, number> = { az: 0, tr: 1, en: 2, ar: 3, ru: 4, fr: 5, id: 6, bn: 7, ms: 8, ur: 9 };
 // [az, tr, en, ar, ru, fr, id, bn, ms, ur]
 const D = {
+  "sw.toggle": ["Səssiz təkrar", "Sessiz tekrar", "Silent review", "المراجعة الصامتة", "Тихое повторение", "Révision silencieuse", "Murajaah tanpa suara", "নীরব পুনরাবৃত্তি", "Ulang kaji senyap", "خاموش دہرائی"],
+  "sw.speed": ["Sürət", "Hız", "Speed", "السرعة", "Скорость", "Vitesse", "Kecepatan", "গতি", "Kelajuan", "رفتار"],
+  "sw.perWord": ["saniyə / söz", "saniye / kelime", "seconds / word", "ثانية / كلمة", "секунд / слово", "secondes / mot", "detik / kata", "সেকেন্ড / শব্দ", "saat / perkataan", "سیکنڈ / لفظ"],
+  "sw.unit": ["s", "sn", "s", "ث", "с", "s", "d", "সে", "s", "س"],
+  "sw.play": ["Sözləri bir-bir aç", "Kelimeleri tek tek aç", "Reveal words one by one", "إظهار الكلمات واحدة تلو الأخرى", "Открывать слова по одному", "Révéler les mots un par un", "Tampilkan kata satu per satu", "শব্দ একে একে দেখাও", "Paparkan perkataan satu demi satu", "الفاظ ایک ایک کر کے دکھائیں"],
+  "sw.pause": ["Dayandır", "Duraklat", "Pause", "إيقاف مؤقت", "Пауза", "Pause", "Jeda", "বিরতি", "Jeda", "روکیں"],
   "nav.prev": ["Əvvəlki səhifə", "Önceki sayfa", "Previous page", "الصفحة السابقة", "Предыдущая страница", "Page précédente", "Halaman sebelumnya", "আগের পৃষ্ঠা", "Halaman sebelumnya", "پچھلا صفحہ"],
   "nav.next": ["Növbəti səhifə", "Sonraki sayfa", "Next page", "الصفحة التالية", "Следующая страница", "Page suivante", "Halaman berikutnya", "পরের পৃষ্ঠা", "Halaman seterusnya", "اگلا صفحہ"],
   "nav.title": ["Surə və səhifə", "Sure ve sayfa", "Surah and page", "السورة والصفحة", "Сура и страница", "Sourate et page", "Surah dan halaman", "সূরা ও পৃষ্ঠা", "Surah dan halaman", "سورت اور صفحہ"],
