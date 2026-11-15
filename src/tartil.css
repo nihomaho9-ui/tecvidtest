@@ -856,3 +856,15 @@ body { margin: 0; }
 .t-micnote { font-size: 12px; color: var(--muted); margin: 10px 6px 0; line-height: 1.4; }
 .t-setbox a.t-act.t-row { flex-direction: row; }
 .t-setbox .t-seg[data-set="madd"] button { direction: ltr; unicode-bidi: isolate; }
+
+/* Round × close buttons (tajwid card, mistakes list, summary), same look as the settings sheet ×. */
+.t-xround { flex: none; width: 32px; height: 32px; padding: 0 !important; border: 0 !important; border-radius: 50%; display: inline-grid; place-items: center; background: color-mix(in srgb, var(--line) 55%, var(--paper)) !important; color: var(--ink) !important; cursor: pointer; vertical-align: middle; }
+.t-xround svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.t-xround:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.tj-top { position: sticky; top: -10px; z-index: 2; margin: -10px -14px 6px; padding: 10px 14px 6px; background: var(--bar); touch-action: none; }
+.tj-top .tj-grab { margin: 0 auto 8px; }
+.tj-ch { align-items: center; gap: 8px; }
+.tj-chr { gap: 8px; }
+.t-miss-h, .t-sum-h { position: sticky; top: -8px; z-index: 2; margin: -8px -8px 0; padding: 10px 10px 8px 14px; background: var(--paper); border-radius: 14px 14px 0 0; }
+.t-miss-h > span { display: inline-flex; align-items: center; gap: 4px; }
+.t-miss-x { margin-inline-start: 6px; }

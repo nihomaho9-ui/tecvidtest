@@ -267,7 +267,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       </div>
     </div>
     <div class="t-miss" hidden>
-      <div class="t-miss-h"><b data-i18n="miss.title"></b><span><button type="button" class="t-miss-go" data-i18n="miss.fix"></button><button type="button" class="t-miss-clear" data-i18n="miss.clear"></button></span></div>
+      <div class="t-miss-h"><b data-i18n="miss.title"></b><span><button type="button" class="t-miss-go" data-i18n="miss.fix"></button><button type="button" class="t-miss-clear" data-i18n="miss.clear"></button><button type="button" class="t-miss-x t-xround" data-i18n-aria="close" data-i18n-title="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>
       <div class="t-miss-list"></div>
     </div>
     <section class="t-home" hidden>
@@ -315,7 +315,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       <div class="t-tour-acts"><button type="button" class="t-tour-skip" data-i18n="tour.skip"></button><button type="button" class="t-tour-next"></button></div>
     </div>
     <div class="t-sum" hidden>
-      <div class="t-sum-h"><b data-i18n="sum.title"></b><button type="button" class="t-sum-ok" data-i18n="close"></button></div>
+      <div class="t-sum-h"><b data-i18n="sum.title"></b><button type="button" class="t-sum-ok t-xround" data-i18n-aria="close" data-i18n-title="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <p class="t-sum-n"></p>
       <ul class="t-sum-list"></ul>
     </div>`;
@@ -636,8 +636,12 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     true,
   );
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeMiss();
+    if (e.key === "Escape") {
+      closeMiss();
+      sumBox.hidden = true;
+    }
   });
+  need<HTMLButtonElement>(".t-miss-x").addEventListener("click", () => closeMiss());
   need<HTMLButtonElement>(".t-miss-clear").addEventListener("click", () => {
     if (!misses.length && !strikes.size) return;
     if (!window.confirm(t("miss.clearConfirm"))) return;

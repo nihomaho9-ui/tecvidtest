@@ -426,9 +426,19 @@ export function createTajwid(host: TajwidHost) {
     nav.append(mk("tj-prev", "tj.prev", rtl ? "›" : "‹", -1), pos, mk("tj-next", "tj.next", rtl ? "‹" : "›", 1));
     const right = document.createElement("span");
     right.className = "tj-chr";
-    right.append(hn, nav);
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "tj-x t-xround";
+    x.setAttribute("aria-label", t("close"));
+    x.title = t("close");
+    x.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    x.addEventListener("click", () => collapse());
+    right.append(hn, nav, x);
     top.append(hb, right);
-    card.append(grab, top);
+    const bar = document.createElement("div");
+    bar.className = "tj-top";
+    bar.append(grab, top);
+    card.append(bar);
     headEl = top;
     list.forEach((x, n) => {
       const row = document.createElement("div");
@@ -495,6 +505,21 @@ export function createTajwid(host: TajwidHost) {
     collapsed = false;
     cardKey = "";
   }
+  // Closing the card = the same as "Davam et": the card hides, marks stay on the words and the chip reopens it.
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && !card.hidden) collapse();
+  });
+  let dragY = -1;
+  card.addEventListener("touchstart", (ev) => {
+    const tg = ev.target as HTMLElement;
+    dragY = ev.touches.length === 1 && tg.closest(".tj-top") && !tg.closest("button") ? ev.touches[0]!.clientY : -1;
+  }, { passive: true });
+  card.addEventListener("touchend", (ev) => {
+    if (dragY < 0) return;
+    const dy = (ev.changedTouches[0]?.clientY ?? dragY) - dragY;
+    dragY = -1;
+    if (dy > 50) collapse();
+  }, { passive: true });
   chip.addEventListener("click", () => {
     if (chip.classList.contains("muted")) return;
     chip.classList.remove("new");
