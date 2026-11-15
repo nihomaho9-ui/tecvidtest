@@ -182,26 +182,44 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       </span>
     </header>
     <div class="t-sheet" hidden>
-      <div class="t-sheet-box" role="dialog" aria-modal="true" data-i18n-aria="set.title">
-        <div class="t-sheet-h"><b data-i18n="set.title"></b><button type="button" class="t-sheet-x" data-i18n="close"></button></div>
-        <label class="t-set"><span data-i18n="lang"></span><select class="t-lang" data-i18n-aria="lang"></select></label>
-        <div class="t-set"><span data-i18n="sense"></span><div class="t-seg" data-set="sense"><button type="button" data-v="normal" aria-pressed="false" data-i18n="sense.normal"></button><button type="button" data-v="sert" aria-pressed="false" data-i18n="sense.sert"></button><button type="button" data-v="cetin" aria-pressed="false" data-i18n="sense.cetin"></button></div></div>
-        <p class="t-hint t-sense-hint"></p>
-        <div class="t-set"><span><span data-i18n="madd"></span> <small class="t-madd-only"></small></span><div class="t-seg" data-set="madd"><button type="button" data-v="4" aria-pressed="false" data-i18n="madd.4"></button><button type="button" data-v="2" aria-pressed="false" data-i18n="madd.2"></button></div></div>
-        <div class="t-set"><span data-i18n="hifz"></span><div class="t-seg" data-set="hifz"><button type="button" data-v="0" aria-pressed="false" data-i18n="off"></button><button type="button" data-v="1" aria-pressed="false" data-i18n="on"></button></div></div>
-        <div class="t-set"><span data-i18n="speed"></span><div class="t-seg" data-set="speed"><button type="button" data-v="orta" aria-pressed="false" data-i18n="speed.orta"></button><button type="button" data-v="tez" aria-pressed="false" data-i18n="speed.tez"></button></div></div>
-        <div class="t-set"><span data-i18n="theme"></span><div class="t-seg" data-set="theme"><button type="button" data-v="cream" aria-pressed="false" data-i18n="theme.cream"></button><button type="button" data-v="white" aria-pressed="false" data-i18n="theme.white"></button><button type="button" data-v="black" aria-pressed="false" data-i18n="theme.black"></button></div></div>
-        <label class="t-set t-microw" hidden><span data-i18n="mic"></span><select class="t-micpick" data-i18n-aria="mic"></select></label>
-        <div class="t-acts">
-          <button type="button" class="t-act t-mine" hidden><span data-i18n="mine"></span> <small class="t-mine-p"></small></button>
-          <button type="button" class="t-act t-back" hidden data-i18n="back"></button>
-          <button type="button" class="t-act t-homebtn" data-i18n="home.title"></button>
-          <button type="button" class="t-act t-tourbtn" data-i18n="tour.replay"></button>
-          <button type="button" class="t-act t-aboutbtn" data-i18n="about"></button>
-          <a class="t-act t-privlink" data-i18n="about.privacy"></a>
+      <div class="t-sheet-box t-setbox" role="dialog" aria-modal="true" data-i18n-aria="set.title">
+        <div class="t-grab" aria-hidden="true"></div>
+        <div class="t-sheet-h"><b data-i18n="set.title"></b><button type="button" class="t-sheet-x t-xbtn" data-i18n-aria="close" data-i18n-title="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="t-today"></div>
+        <div class="t-card">
+          <label class="t-row"><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><span class="t-lbl" data-i18n="lang"></span><span class="t-val t-selwrap"><select class="t-lang" data-i18n-aria="lang"></select><svg class="t-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></label>
         </div>
-        <p class="t-today"></p>
+        <div class="t-sec" data-i18n="set.secRec"></div>
+        <div class="t-card">
+          <div class="t-row"><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15a8 8 0 1 1 16 0"/><path d="M12 15l4-5"/><circle cx="12" cy="15" r="1.3"/></svg></span><span class="t-lbl" data-i18n="sense"></span><div class="t-seg" data-set="sense"><button type="button" data-v="normal" aria-pressed="false" data-i18n="sense.normal"></button><button type="button" data-v="sert" aria-pressed="false" data-i18n="sense.sert"></button><button type="button" data-v="cetin" aria-pressed="false" data-i18n="sense.cetin"></button></div></div>
+          <p class="t-rowhint t-sense-hint"></p>
+          <div class="t-row"><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 11v2"/></svg></span><span class="t-lbl"><span data-i18n="madd"></span><small class="t-madd-only"></small></span><div class="t-seg" data-set="madd"><button type="button" data-v="4" aria-pressed="false" data-i18n-aria="madd.4" data-i18n-title="madd.4">4–5</button><button type="button" data-v="2" aria-pressed="false" data-i18n-aria="madd.2" data-i18n-title="madd.2">2</button></div></div>
+          <button type="button" class="t-row t-microw" aria-haspopup="dialog" hidden><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span class="t-lbl" data-i18n="mic"></span><span class="t-val"><span class="t-micval"></span><svg class="t-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        </div>
+        <div class="t-sec" data-i18n="set.secHifz"></div>
+        <div class="t-card">
+          <div class="t-row"><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M8 7a3 3 0 0 0-3 3 3 3 0 0 0 0 4 3 3 0 0 0 3 3M16 7a3 3 0 0 1 3 3 3 3 0 0 1 0 4 3 3 0 0 1-3 3M8 7a2 2 0 0 1 4-1M16 7a2 2 0 0 0-4-1"/></svg></span><span class="t-lbl"><span data-i18n="hifz"></span><small data-i18n="hifz.sub"></small></span><button type="button" class="t-switch" role="switch" aria-checked="false" data-i18n-aria="hifz"></button></div>
+          <div class="t-row"><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6l7 6-7 6zM13 6l7 6-7 6z"/></svg></span><span class="t-lbl" data-i18n="speed"></span><div class="t-seg" data-set="speed"><button type="button" data-v="orta" aria-pressed="false" data-i18n="speed.orta"></button><button type="button" data-v="tez" aria-pressed="false" data-i18n="speed.tez"></button></div></div>
+          <div class="t-row"><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-1.2-1-1.4-1-2.4 0-.8.7-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4-4-7.5-9-7.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/></svg></span><span class="t-lbl" data-i18n="theme"></span><div class="t-seg t-swatches" data-set="theme"><button type="button" data-v="cream" aria-pressed="false" data-i18n-aria="theme.cream" data-i18n-title="theme.cream"></button><button type="button" data-v="white" aria-pressed="false" data-i18n-aria="theme.white" data-i18n-title="theme.white"></button><button type="button" data-v="black" aria-pressed="false" data-i18n-aria="theme.black" data-i18n-title="theme.black"></button></div></div>
+        </div>
+        <div class="t-sec" data-i18n="set.secMore"></div>
+        <div class="t-card t-acts">
+          <button type="button" class="t-row t-act t-mine" hidden><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z"/></svg></span><span class="t-lbl"><span data-i18n="mine"></span> <small class="t-mine-p"></small></span><svg class="t-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button type="button" class="t-row t-act t-back" hidden><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></span><span class="t-lbl" data-i18n="back"></span><svg class="t-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button type="button" class="t-row t-act t-homebtn"><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/></svg></span><span class="t-lbl" data-i18n="home.title"></span><svg class="t-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button type="button" class="t-row t-act t-tourbtn"><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17h.01"/></svg></span><span class="t-lbl" data-i18n="tour.replay"></span><svg class="t-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button type="button" class="t-row t-act t-aboutbtn"><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg></span><span class="t-lbl" data-i18n="about"></span><svg class="t-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          <a class="t-row t-act t-privlink"><span class="t-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><span class="t-lbl" data-i18n="about.privacy"></span><svg class="t-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+        </div>
         <p class="t-about"><b>Tasheeh</b> · <span data-i18n="foot"></span></p>
+      </div>
+    </div>
+    <div class="t-sheet t-micsheet" hidden>
+      <div class="t-sheet-box t-setbox" role="dialog" aria-modal="true" data-i18n-aria="mic">
+        <div class="t-grab" aria-hidden="true"></div>
+        <div class="t-sheet-h"><b data-i18n="mic"></b><button type="button" class="t-sheet-x t-xbtn t-mic-x" data-i18n-aria="close" data-i18n-title="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="t-card t-micopts" role="radiogroup" data-i18n-aria="mic"></div>
+        <p class="t-micnote" data-i18n="mic.note"></p>
       </div>
     </div>
     <div class="t-sheet t-nav" hidden>
@@ -756,10 +774,13 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     }
   }
   applyMunfasil(munfasil);
+  const hifzSwitch = need<HTMLButtonElement>(".t-switch");
+  hifzSwitch.addEventListener("click", () => applyHifz(!hifz));
   function applyHifz(on: boolean): void {
     hifz = on;
     root.classList.toggle("hifz", on);
     setSeg("hifz", on ? "1" : "0");
+    hifzSwitch.setAttribute("aria-checked", on ? "true" : "false");
     try {
       localStorage.setItem("tartil.hifz", on ? "1" : "0");
     } catch {
@@ -778,7 +799,13 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     else if (group === "speed") applyPace(v === "tez" ? "tez" : "orta");
     else if (group === "theme" && (v === "cream" || v === "white" || v === "black")) applyTheme(v);
   });
-  const micPick = need<HTMLSelectElement>(".t-micpick");
+  // Microphone choice: "" = automatic (the browser's default input), else a deviceId. Picked in its own sheet.
+  let micChoice = "";
+  let micList: MediaDeviceInfo[] = [];
+  const micRow = need<HTMLButtonElement>(".t-microw");
+  const micVal = need<HTMLElement>(".t-micval");
+  const micSheet = need<HTMLElement>(".t-micsheet");
+  const micOpts = need<HTMLElement>(".t-micopts");
   function savedMic(): string {
     try {
       return localStorage.getItem("tartil.mic") || "";
@@ -786,31 +813,131 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       return "";
     }
   }
+  type MicKind = "bt" | "headset" | "bottom" | "usb" | "phone" | "other";
+  /** Device labels are whatever the phone reports ("Speakerphone", "Headset earpiece", "Varsayılan"…): map them to a plain name. */
+  function micKind(label: string): MicKind {
+    const l = label.toLowerCase();
+    if (/bluetooth|\bbt\b|airpods|buds|hands-?free|sco\b/.test(l)) return "bt";
+    if (/headset|earpiece|headphone|earphone|wired|qulaqlıq|kulaklık|наушник|гарнитур|casque|écouteur/.test(l)) return "headset";
+    if (/speakerphone|speaker|bottom|hoparlör/.test(l)) return "bottom";
+    if (/\busb\b/.test(l)) return "usb";
+    if (/default|varsay|по умолчанию|défaut|bawaan|built-?in|internal|dahili|встроенн|interne|\bphone\b|telefon/.test(l)) return "phone";
+    return "other";
+  }
+  const MIC_ICON: Record<MicKind | "auto", string> = {
+    auto: '<path d="M12 3l1.8 4.7L18.5 9l-4.7 1.8L12 15.5l-1.8-4.7L5.5 9l4.7-1.3z"/><path d="M18 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>',
+    phone: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+    bottom: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M10 18.5h4"/><path d="M12 15.5v.01"/>',
+    headset: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/>',
+    bt: '<path d="M7 7l10 10-5 4V3l5 4L7 17"/>',
+    usb: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+    other: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  };
+  function micName(d: MediaDeviceInfo, i: number): string {
+    const kind = micKind(d.label || "");
+    if (kind === "bt") return t("mic.bt");
+    if (kind === "headset") return t("mic.headset");
+    if (kind === "bottom") return t("mic.bottom");
+    if (kind === "usb") return t("mic.usb");
+    if (kind === "phone") return t("mic.phone");
+    return t("micN", { n: i + 1 });
+  }
+  function paintMicRow(): void {
+    const i = micList.findIndex((d) => d.deviceId === micChoice);
+    micVal.textContent = i >= 0 ? micName(micList[i]!, i) : t("mic.auto");
+  }
+  function micOption(id: string, kind: MicKind | "auto", name: string, sub: string, rec = false): HTMLButtonElement {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "t-row t-micopt";
+    b.setAttribute("role", "radio");
+    b.dataset.id = id;
+    const on = id === micChoice;
+    b.setAttribute("aria-checked", on ? "true" : "false");
+    const icon = document.createElement("span");
+    icon.className = "t-ic";
+    icon.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${MIC_ICON[kind]}</svg>`;
+    const lbl = document.createElement("span");
+    lbl.className = "t-lbl";
+    const title = document.createElement("span");
+    title.textContent = name;
+    lbl.appendChild(title);
+    if (rec) {
+      const r = document.createElement("em");
+      r.className = "t-rec";
+      r.textContent = ` · ${t("mic.rec")}`;
+      lbl.appendChild(r);
+    }
+    if (sub) {
+      const small = document.createElement("small");
+      small.textContent = sub;
+      small.dir = "auto";
+      lbl.appendChild(small);
+    }
+    const chk = document.createElement("span");
+    chk.className = "t-chk";
+    chk.setAttribute("aria-hidden", "true");
+    chk.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    b.append(icon, lbl, chk);
+    return b;
+  }
+  function paintMicSheet(): void {
+    micOpts.replaceChildren(
+      micOption("", "auto", t("mic.auto"), t("mic.autoSub"), true),
+      ...micList.map((d, i) => micOption(d.deviceId, micKind(d.label || ""), micName(d, i), d.label || "")),
+    );
+  }
   async function listMics(): Promise<void> {
     if (!navigator.mediaDevices?.enumerateDevices) return;
     const found = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput");
-    micPick.replaceChildren();
-    const auto = document.createElement("option");
-    auto.value = "";
-    auto.textContent = t("mic");
-    micPick.appendChild(auto);
-    found.forEach((d, i) => {
-      const opt = document.createElement("option");
-      opt.value = d.deviceId;
-      opt.textContent = d.label || t("micN", { n: i + 1 });
-      micPick.appendChild(opt);
-    });
+    micList = found;
     const keep = savedMic();
-    if ([...micPick.options].some((opt) => opt.value === keep)) micPick.value = keep;
-    micPick.closest<HTMLElement>(".t-microw")?.toggleAttribute("hidden", found.length < 2);
+    micChoice = micList.some((d) => d.deviceId === keep) ? keep : "";
+    micRow.toggleAttribute("hidden", found.length < 2);
+    paintMicRow();
+    if (!micSheet.hidden) paintMicSheet();
   }
-  micPick.addEventListener("change", () => {
-    try {
-      localStorage.setItem("tartil.mic", micPick.value);
-    } catch {
-      /* ignore quota */
+  function closeMicSheet(): void {
+    if (micSheet.hidden) return;
+    micSheet.hidden = true;
+    micRow.setAttribute("aria-expanded", "false");
+  }
+  micRow.addEventListener("click", () => {
+    paintMicSheet();
+    micSheet.hidden = false;
+    micRow.setAttribute("aria-expanded", "true");
+    micOpts.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus();
+  });
+  micSheet.addEventListener("click", (e) => {
+    const tg = e.target as HTMLElement;
+    const opt = tg.closest<HTMLButtonElement>(".t-micopt");
+    if (opt) {
+      micChoice = opt.dataset.id || "";
+      try {
+        localStorage.setItem("tartil.mic", micChoice);
+      } catch {
+        /* ignore quota */
+      }
+      paintMicRow();
+      closeMicSheet();
+      micRow.focus();
+      return;
+    }
+    if (tg === micSheet || tg.closest(".t-mic-x")) {
+      closeMicSheet();
+      micRow.focus();
     }
   });
+  window.addEventListener("keydown", (e) => {
+    if (micSheet.hidden) return;
+    if (e.key === "Escape") {
+      e.stopImmediatePropagation();
+      closeMicSheet();
+      micRow.focus();
+      return;
+    }
+    trapFocus(micSheet, e);
+  }, true);
   void listMics();
   const mineBtn = need<HTMLButtonElement>(".t-mine");
   const backBtn = need<HTMLButtonElement>(".t-back");
@@ -1026,7 +1153,26 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   function paintToday(): void {
     const week = weekTotals();
     // Today and week error counts are cumulative recorded mistakes (including ones later fixed), not the open list.
-    todayEl.textContent = t("today", { d: dayAyahs.size, e: todayErrorCount(), wa: week.ayahs, we: week.errors });
+    // Small pills at the top of the settings sheet; numbers in bold.
+    const v: Record<string, number> = { d: dayAyahs.size, e: todayErrorCount(), wa: week.ayahs, we: week.errors };
+    const pill = (key: "pill.today" | "pill.err" | "pill.week", err = false) => {
+      const el = document.createElement("span");
+      el.className = err ? "t-pill err" : "t-pill";
+      const dot = document.createElement("i");
+      dot.setAttribute("aria-hidden", "true");
+      el.appendChild(dot);
+      t(key).split(/(\{\w+\})/).forEach((part) => {
+        const m = /^\{(\w+)\}$/.exec(part);
+        if (m) {
+          const b = document.createElement("b");
+          b.textContent = String(v[m[1]!] ?? 0);
+          el.appendChild(b);
+        } else if (part) el.appendChild(document.createTextNode(part));
+      });
+      return el;
+    };
+    todayEl.replaceChildren(pill("pill.today"), pill("pill.err", true), pill("pill.week"));
+    todayEl.setAttribute("aria-label", t("today", v));
   }
   function weekKey(offset = 0): string {
     const n = new Date();
@@ -2291,7 +2437,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     } else {
       setStatus(() => t("st.listening"), () => t("st.hidden"));
     }
-    const micId = micPick.value;
+    const micId = micChoice;
     const audio = {
       channelCount: { ideal: 1 },
       sampleRate: { ideal: 16000 },
@@ -2918,7 +3064,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     root.classList.toggle("ui-rtl", isRtl());
     applyI18n(root);
     root.querySelectorAll<HTMLElement>(".t-madd-only").forEach((el) => {
-      el.textContent = `(${t("sense.cetin")})`;
+      el.textContent = t("madd.only");
     });
     [...surahSel.options].forEach((opt) => {
       const n = Number(opt.value);
@@ -2927,7 +3073,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     applySense(sense);
     paintMisses();
     paintToday();
-    if (micPick.options[0] && !micPick.options[0].value) micPick.options[0].textContent = t("mic");
+    paintMicRow();
+    if (!micSheet.hidden) paintMicSheet();
     tj.relabel();
     paintPageNo();
     paintTurns();
@@ -3280,7 +3427,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   function paintHome(): void {
     const p = lastRead();
     homeContSub.textContent = pageOf.size ? t("home.contSub", { s: surahName(surahOnPage(p)), p: num(p) }) : "";
-    homeStats.textContent = todayEl.textContent || "";
+    homeStats.textContent = todayEl.getAttribute("aria-label") || "";
     homeLangSel.value = getLang();
     homeLangK.textContent = getLang().toUpperCase();
     ixLast.textContent = pageOf.size ? t("idx.last", { s: surahName(surahOnPage(p)), p: num(p) }) : "";
