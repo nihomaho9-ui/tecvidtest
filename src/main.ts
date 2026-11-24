@@ -1,6 +1,8 @@
 import "./tartil.css";
 import { createTajwid } from "./tajwid";
 import { LANGS, applyI18n, getLang, isRtl, onLang, setLang, surahName, surahNameAr, t, type Lang } from "./i18n";
+import { canReveal, isNearbyAyah, isWrongMark, pickLocate, revealedIndices, wrongIndices, type GateVerdict, type SearchResult } from "./recite-gate";
+import { exportJson, importJson, intensity, listSorted, loadSpots, noteMiss, noteOk, saveSpots, suggestions, toMisses, wordHeat, type WeakSpot } from "./weak-spots";
 
 let delayMin = 400;
 let delayStep = 30;
@@ -19,6 +21,7 @@ type FeedSession = {
     setSlipHead: (mode: false | "strict" | "high") => void;
     correct: (action: "review_later" | "retry" | "continue") => unknown;
     verdicts: () => Verdict[];
+    transcript?: string;
     correction: { state: { phase?: string }; suppressed?: { delete: (wordIndex: number) => void }; thresholds?: Record<string, number> };
   } | null;
 };
@@ -28,10 +31,12 @@ type ProgressMsg = {
   type: string;
   surah?: number;
   ayah?: number;
+  word?: number;
   word_index?: number;
   matched_indices?: number[];
   issue?: Issue;
   state?: { phase?: string; issue?: Issue | null };
+  candidates?: { surah: number; ayah: number; confidence?: number }[];
 };
 type Miss = { s: number; a: number; w: number; kind: string; n: number; t: number };
 const MISS_KEY = "tartil.misses";
@@ -251,6 +256,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
             <b class="t-st"></b>
           </div>
           <span class="t-sub" hidden></span>
+          <button type="button" class="t-locate" hidden data-i18n="st.locateGo"></button>
           <div class="t-load" aria-hidden="true"><i></i></div>
           <div class="t-level" aria-hidden="true"><i></i></div>
         </div>
@@ -272,7 +278,10 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     </div>
     <div class="t-miss" hidden>
       <div class="t-miss-h"><b data-i18n="miss.title"></b><span><button type="button" class="t-miss-go" data-i18n="miss.fix"></button><button type="button" class="t-miss-clear" data-i18n="miss.clear"></button><button type="button" class="t-miss-x t-xround" data-i18n-aria="close" data-i18n-title="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>
+      <div class="t-miss-tools"><button type="button" class="t-miss-export" data-i18n="miss.export"></button><button type="button" class="t-miss-import" data-i18n="miss.import"></button></div>
+      <div class="t-miss-suggest" hidden></div>
       <div class="t-miss-list"></div>
+      <input type="file" class="t-miss-file" accept="application/json,.json" hidden />
     </div>
     <section class="t-home" hidden>
       <header class="t-home-top">
@@ -363,6 +372,11 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   const micBtn = need<HTMLButtonElement>(".t-mic");
   const st = need<HTMLElement>(".t-st");
   const sub = need<HTMLElement>(".t-sub");
+  const locateBtn = need<HTMLButtonElement>(".t-locate");
+  locateBtn.addEventListener("click", () => {
+    if (!pendingLocate) return;
+    adoptPlace(pendingLocate.s, pendingLocate.a, pendingLocate.w, "prompt", !!pendingLocate.relock);
+  });
   const logo = root.querySelector<HTMLImageElement>(".t-logo");
   if (logo) logo.src = asset("icon-192.png");
   const loadBar = need<HTMLElement>(".t-load");
@@ -428,11 +442,18 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   const missBox = need<HTMLElement>(".t-miss");
   const missList = need<HTMLElement>(".t-miss-list");
   let misses: Miss[] = [];
+  let spots: WeakSpot[] = [];
   const strikes = new Map<string, number>();
   const warns = new Set<string>();
   let sense: "normal" | "sert" | "cetin" = "normal";
   let lastHeardS = 0;
   let lastHeardA = 0;
+  const wrongKeys = new Set<string>();
+  type LocatePhase = "off" | "searching" | "prompt" | "locked";
+  let locatePhase: LocatePhase = "off";
+  let pendingLocate: { s: number; a: number; w: number; level: "auto" | "prompt"; relock?: boolean } | null = null;
+  let relocateGuess: { s: number; a: number } | null = null;
+  let lastLocateQuery = "";
   let hifz = false;
   // Silent review (səssiz təkrar): words hidden as thin lines, revealed by tap or one by one, no mic.
   const SW_SPEEDS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5];
@@ -465,6 +486,9 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   } catch {
     misses = [];
   }
+  spots = loadSpots(localStorage, misses);
+  misses = toMisses(spots);
+  saveSpots(spots);
   try {
     const raw = JSON.parse(localStorage.getItem("tartil.strikes") || "{}") as Record<string, number>;
     Object.entries(raw).forEach(([key, n]) => {
@@ -495,6 +519,12 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     }
   }
 
+  function persistSpots(): void {
+    misses = toMisses(spots);
+    saveSpots(spots);
+    saveMisses();
+  }
+
   function paintMisses(): void {
     tj.paint();
     const rank: Record<string, number> = { "err-skip": 4, "err-miss": 3, "err-repeat": 2, "err-vowel": 1 };
@@ -517,16 +547,49 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       } else put(`${m.s}:${m.a}:${m.w}`, cls);
     }
     sheet.querySelectorAll<HTMLElement>(".w").forEach((el) => {
-      el.classList.remove("err", "err-miss", "err-vowel", "err-skip", "err-repeat", "warn");
+      el.classList.remove("err", "err-miss", "err-vowel", "err-skip", "err-repeat", "err-wrong", "warn", "heat-1", "heat-2", "heat-3");
       const key = el.dataset.k || "";
       const cls = mark.get(key);
       if (cls) el.classList.add(cls);
+      else if (wrongKeys.has(key)) el.classList.add("err-wrong");
       else if (warns.has(key)) el.classList.add("warn");
+      const parts = key.split(":");
+      if (parts.length === 3) {
+        const heat = wordHeat(spots, Number(parts[0]), Number(parts[1]), Number(parts[2]));
+        if (heat) el.classList.add(`heat-${heat}`);
+      }
     });
-    const total = misses.reduce((n, m) => n + (m.n || 1), 0);
+    const total = spots.length;
     missBtn.textContent = String(total);
     missBtn.setAttribute("aria-label", t("miss.btnN", { n: total }));
     paintToday();
+    const suggestBox = missBox.querySelector<HTMLElement>(".t-miss-suggest");
+    if (suggestBox) {
+      suggestBox.replaceChildren();
+      const due = suggestions(spots);
+      suggestBox.hidden = !due.length;
+      if (due.length) {
+        const head = document.createElement("p");
+        head.className = "t-miss-suggest-h";
+        head.textContent = t("miss.suggest");
+        suggestBox.appendChild(head);
+        for (const s of due) {
+          const row = document.createElement("button");
+          row.type = "button";
+          row.className = "t-miss-row t-miss-sug";
+          const lv = intensity(s.score);
+          if (lv) row.classList.add(`heat-${lv}`);
+          row.textContent = `${surahName(s.s)} ${s.a}`;
+          row.addEventListener("click", () => {
+            const m = misses.find((x) => x.s === s.s && x.a === s.a);
+            if (!m) return;
+            queueOn = false;
+            void beginRetry(m);
+          });
+          suggestBox.appendChild(row);
+        }
+      }
+    }
     missList.replaceChildren();
     if (!misses.length) {
       const empty = document.createElement("p");
@@ -535,17 +598,19 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       missList.appendChild(empty);
       return;
     }
-    [...misses].reverse().forEach((m) => {
+    listSorted(spots).forEach((m) => {
       const row = document.createElement("button");
       row.type = "button";
       row.className = "t-miss-row";
+      const lv = intensity(m.score);
+      if (lv) row.classList.add(`heat-${lv}`);
       const name = surahName(m.s);
       const kind = kindName(m.kind);
-      const times = m.n > 1 ? ` · ${m.n}` : "";
+      const times = m.hits > 1 ? ` · ${m.hits}` : "";
       row.textContent = `${name} ${m.a}${wordAt(m.w)} — ${kind}${times}`;
       row.addEventListener("click", () => {
         queueOn = false;
-        void beginRetry(m);
+        void beginRetry({ s: m.s, a: m.a, w: m.w, kind: m.kind, n: m.hits, t: m.lastMiss });
       });
       missList.appendChild(row);
     });
@@ -558,12 +623,10 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (!s || !a) return;
     const kind = issue.kind || "error";
     const prev = misses.find((m) => m.s === s && m.a === a && m.w === w && m.kind === kind);
-    if (prev) prev.n += 1;
-    else misses.push({ s, a, w, kind, n: 1, t: Date.now() });
-    if (misses.length > 200) misses = misses.slice(-200);
+    spots = noteMiss(spots, s, a, w, kind);
+    persistSpots();
     takeMisses.push({ s, a, w, kind, n: 1, t: Date.now() });
     bumpWeek("error");
-    saveMisses();
     paintMisses();
     navigator.vibrate?.(50);
     const name = surahName(s);
@@ -647,14 +710,40 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   });
   need<HTMLButtonElement>(".t-miss-x").addEventListener("click", () => closeMiss());
   need<HTMLButtonElement>(".t-miss-clear").addEventListener("click", () => {
-    if (!misses.length && !strikes.size) return;
+    if (!spots.length && !strikes.size) return;
     if (!window.confirm(t("miss.clearConfirm"))) return;
+    spots = [];
     misses = [];
     strikes.clear();
     warns.clear();
     saveStrikes();
-    saveMisses();
+    persistSpots();
     paintMisses();
+  });
+  need<HTMLButtonElement>(".t-miss-export").addEventListener("click", () => {
+    const blob = new Blob([exportJson(spots)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "tasheeh-weak-spots.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  const missFile = need<HTMLInputElement>(".t-miss-file");
+  need<HTMLButtonElement>(".t-miss-import").addEventListener("click", () => missFile.click());
+  missFile.addEventListener("change", () => {
+    const file = missFile.files?.[0];
+    missFile.value = "";
+    if (!file) return;
+    void file.text().then((raw) => {
+      try {
+        spots = importJson(raw, spots);
+        persistSpots();
+        paintMisses();
+        setStatus(() => t("miss.imported", { n: spots.length }), () => t("miss.imported", { n: spots.length }));
+      } catch {
+        setStatus(() => t("miss.importFail"), () => t("miss.importFail"));
+      }
+    });
   });
   need<HTMLButtonElement>(".t-miss-go").addEventListener("click", () => {
     if (!orderedMisses().length) {
@@ -1599,6 +1688,8 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         if (el.classList.contains("on") !== on) el.classList.toggle("on", on);
         const fresh = key === freshKey;
         if (el.classList.contains("fresh") !== fresh) el.classList.toggle("fresh", fresh);
+        const wrong = !on && wrongKeys.has(key);
+        if (el.classList.contains("err-wrong") !== wrong) el.classList.toggle("err-wrong", wrong);
       });
       paintCue();
       followLine();
@@ -1737,7 +1828,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         const prefix = `${surah}:${ayah}:`;
         sheet.querySelectorAll<HTMLElement>(".w").forEach((el) => {
           const k = el.dataset.k || "";
-          if (k.startsWith(prefix) && /^\d+$/.test(k.slice(prefix.length))) shown.add(k);
+          if (k.startsWith(prefix) && /^\d+$/.test(k.slice(prefix.length)) && !wrongKeys.has(k)) shown.add(k);
         });
       }
       if (ayah === 1) shown.add(`bism:${surah}`);
@@ -1750,9 +1841,9 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
           applyShown();
           return;
         }
-        misses = misses.filter((m) => !(m.s === surah && m.a === ayah));
+        spots = noteOk(spots, surah, ayah, -1);
+        persistSpots();
         forgetSpot(surah, ayah);
-        saveMisses();
         paintMisses();
         ayahLock = "";
         setStatus(() => t("st.fixed"), () => t("st.fixedSub"));
@@ -1766,9 +1857,9 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (retryHit(key)) {
       const bits = key.split(":").map(Number);
       const whole = retryKey.endsWith(":*");
-      misses = misses.filter((m) => !(m.s === bits[0] && m.a === bits[1] && (whole || m.w === bits[2])));
+      spots = noteOk(spots, bits[0], bits[1], whole ? -1 : bits[2]);
+      persistSpots();
       forgetSpot(bits[0], bits[1], whole ? -1 : bits[2]);
-      saveMisses();
       retryKey = "";
       paintMisses();
       applyShown();
@@ -1875,9 +1966,9 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         return;
       }
       if (phase === "corrected" && issue?.surah && issue.ayah) {
-        misses = misses.filter((m) => !(m.s === issue.surah && m.a === issue.ayah && m.w === (issue.word ?? -1)));
+        spots = noteOk(spots, issue.surah, issue.ayah, issue.word ?? -1);
+        persistSpots();
         forgetSpot(issue.surah, issue.ayah, issue.word ?? -1);
-        saveMisses();
         paintMisses();
         lockDirty = false;
         if (!settling) {
@@ -1894,20 +1985,43 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       }
       return;
     }
+    if (msg.type === "verse_candidate") {
+      if (!micOn || retryKey || locatePhase === "locked") return;
+      const c0 = msg.candidates?.[0];
+      const s = c0?.surah ?? msg.surah;
+      const a = c0?.ayah ?? msg.ayah;
+      if (s && a) considerLocateFromEngine(s, a, msg.word ?? 0);
+      return;
+    }
     if (!micOn || msg.type !== "word_progress") return;
     const surah = msg.surah;
     const ayah = msg.ayah;
     if (!surah || !ayah) return;
-    const upto = typeof msg.word_index === "number" ? msg.word_index : -1;
-    const idxs = new Set<number>(msg.matched_indices ?? []);
-    for (let i = 0; i <= upto; i += 1) idxs.add(i);
-    if (!idxs.size) return;
+    if (locatePhase === "searching" || locatePhase === "prompt") {
+      considerLocateFromEngine(surah, ayah, typeof msg.word_index === "number" ? msg.word_index : 0);
+      if (locatePhase !== "locked") return;
+    }
+    let all: GateVerdict[] = [];
+    try {
+      all = (session?.zipformer?.verdicts() ?? []) as GateVerdict[];
+    } catch {
+      all = [];
+    }
+    const idxs = revealedIndices(all, surah, ayah);
+    for (const w of wrongIndices(all, surah, ayah)) {
+      const key = `${surah}:${ayah}:${w}`;
+      if (!shown.has(key)) wrongKeys.add(key);
+    }
+    for (const i of idxs) wrongKeys.delete(`${surah}:${ayah}:${i}`);
+    applyShown();
+    maybeRelocateMidSession();
+    if (!idxs.length) return;
     lastHeardS = surah;
     lastHeardA = ayah;
     checkFinishedAyah(surah, ayah);
     if (surah) expectPage({ surah, ayah });
     tj.heard(surah, ayah);
-    schedule(surah, ayah, [...idxs]);
+    schedule(surah, ayah, idxs);
   }
 
   // When the reciter starts ayah N+1, judge ayah N's words once more with its whole audio settled.
@@ -2084,7 +2198,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         ort,
         model,
         corpus,
-        stayOnSurah: true,
+        stayOnSurah: false,
         config: { outsideJumpCost: 24, commitDwell: 4, backfillRatio: 2 },
         onEvent: (msg: unknown) => {
           if (msg && typeof msg === "object" && "type" in msg) onEvent(msg as ProgressMsg);
@@ -2096,7 +2210,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
         ort,
         model,
         corpus,
-        stayOnSurah: true,
+        stayOnSurah: false,
         config: { outsideJumpCost: 24, commitDwell: 4, backfillRatio: 2 },
         onEvent: (msg: unknown) => {
           if (msg && typeof msg === "object" && "type" in msg) onEvent(msg as ProgressMsg);
@@ -2148,6 +2262,179 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   }
 
   let expectedKey = "";
+  function zipInner(): {
+    engine?: {
+      setHint?: (h: { surah: number; ayah: number } | null) => void;
+      track?: (s: number, a: number, w?: number) => unknown;
+      tracker?: { lost: boolean; costRate: (n?: number) => number | null };
+      index?: { search: (q: string, hint?: unknown, limit?: number) => SearchResult };
+    };
+    index?: { search: (q: string, hint?: unknown, limit?: number) => SearchResult };
+    transcript?: string;
+  } | null {
+    return (session?.zipformer as unknown as {
+      engine?: {
+        setHint?: (h: { surah: number; ayah: number } | null) => void;
+        track?: (s: number, a: number, w?: number) => unknown;
+        tracker?: { lost: boolean; costRate: (n?: number) => number | null };
+        index?: { search: (q: string, hint?: unknown, limit?: number) => SearchResult };
+      };
+      index?: { search: (q: string, hint?: unknown, limit?: number) => SearchResult };
+      transcript?: string;
+    }) ?? null;
+  }
+
+  function searchTranscript(query?: string): SearchResult | null {
+    const inner = zipInner();
+    const index = inner?.index ?? inner?.engine?.index;
+    const text = query ?? inner?.transcript ?? "";
+    if (!index || text.length < 12) return null;
+    try {
+      return index.search(text.slice(-250), null, 3);
+    } catch {
+      return null;
+    }
+  }
+
+  function setPageHint(): void {
+    const inner = zipInner();
+    const here = pages[page - 1]?.[0];
+    if (!inner?.engine?.setHint || !here) return;
+    try {
+      inner.engine.setHint({ surah: here[0], ayah: here[1] });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function hideLocatePrompt(): void {
+    locateBtn.hidden = true;
+    pendingLocate = null;
+  }
+
+  function locateLabel(s: number, a: number): string {
+    return `${surahName(s)} ${a}`;
+  }
+
+  function onPage(s: number, a: number): boolean {
+    return (pages[page - 1] ?? []).some(([ps, pa]) => ps === s && pa === a);
+  }
+
+  function adoptPlace(s: number, a: number, word = 0, announce: "auto" | "prompt" | "quiet" = "quiet", relock = false): void {
+    const target = pageOf.get(`${s}:${a}`);
+    if (target && target !== page) {
+      page = clampPage(target);
+      if (!retryKey) {
+        try {
+          localStorage.setItem("tartil.read", String(page));
+        } catch {
+          /* ignore quota */
+        }
+      }
+      void render();
+    }
+    seqS = s;
+    seqA = a;
+    seqDone = false;
+    seqHold = false;
+    expectedKey = "";
+    expectPage({ surah: s, ayah: a });
+    if (relock) {
+      try {
+        zipInner()?.engine?.track?.(s, a, word);
+      } catch {
+        /* ignore */
+      }
+    }
+    lastHeardS = s;
+    lastHeardA = a;
+    locatePhase = "locked";
+    hideLocatePrompt();
+    relocateGuess = null;
+    if (announce !== "quiet") {
+      setStatus(() => t("st.locate", { p: locateLabel(s, a) }), () => t(announce === "auto" ? "st.locateSub" : "st.locateAsk"));
+    }
+  }
+
+  function showLocatePrompt(s: number, a: number, w: number, relock = false): void {
+    pendingLocate = { s, a, w, level: "prompt", relock };
+    locatePhase = "prompt";
+    locateBtn.hidden = false;
+    locateBtn.textContent = t("st.locateGo");
+    setStatus(() => t("st.locate", { p: locateLabel(s, a) }), () => t("st.locateAsk"));
+  }
+
+  function considerHit(hit: { surah: number; ayah: number; word: number; distance: number }, level: "auto" | "prompt", mid = false): void {
+    const s = hit.surah;
+    const a = hit.ayah;
+    const w = hit.word ?? 0;
+    if (!s || !a) return;
+    const last = lastHeardS ? pageIndex?.ayahs[lastHeardS - 1] : undefined;
+    if (mid && isNearbyAyah(lastHeardS, lastHeardA, s, a, last)) return;
+    if (onPage(s, a) || (lastHeardS === s && lastHeardA === a && locatePhase === "locked")) {
+      if (locatePhase !== "locked") {
+        adoptPlace(s, a, w, "quiet");
+        if (micOn && !retryKey) setStatus(() => t("st.listening"), () => `${surahName(s)} ${a}`);
+      } else {
+        expectPage({ surah: s, ayah: a });
+      }
+      return;
+    }
+    if (level === "auto") adoptPlace(s, a, w, "auto", mid);
+    else showLocatePrompt(s, a, w, mid);
+  }
+
+  function considerLocateFromEngine(s: number, a: number, w = 0): void {
+    const result = searchTranscript();
+    const picked = pickLocate(result);
+    if (picked) {
+      considerHit(picked.hit, picked.level);
+      return;
+    }
+    considerHit({ surah: s, ayah: a, word: w, distance: 0.25 }, "prompt");
+  }
+
+  function maybeRelocateMidSession(): void {
+    if (retryKey || locatePhase !== "locked" || !micOn) return;
+    const inner = zipInner();
+    const text = inner?.transcript ?? "";
+    if (text.length < 24 || text === lastLocateQuery) return;
+    lastLocateQuery = text;
+    const result = searchTranscript(text.slice(-100));
+    const picked = pickLocate(result);
+    if (!picked) {
+      relocateGuess = null;
+      return;
+    }
+    const { hit, level } = picked;
+    const last = lastHeardS ? pageIndex?.ayahs[lastHeardS - 1] : undefined;
+    if (isNearbyAyah(lastHeardS, lastHeardA, hit.surah, hit.ayah, last)) {
+      relocateGuess = null;
+      return;
+    }
+    const agrees = !!relocateGuess && relocateGuess.s === hit.surah && relocateGuess.a === hit.ayah;
+    relocateGuess = { s: hit.surah, a: hit.ayah };
+    if (!agrees) return;
+    const lost = !!inner?.engine?.tracker?.lost;
+    let rate: number | null = null;
+    try {
+      rate = inner?.engine?.tracker?.costRate?.() ?? null;
+    } catch {
+      rate = null;
+    }
+    let all: GateVerdict[] = [];
+    try {
+      all = (session?.zipformer?.verdicts() ?? []) as GateVerdict[];
+    } catch {
+      all = [];
+    }
+    const here = all.filter((v) => v.surah === lastHeardS && v.ayah === lastHeardA);
+    const bad = here.filter((v) => v.state === "wrong" || v.state === "skipped").length >= 2;
+    const off = lost || (rate != null && rate >= 0.35) || bad || here.length === 0;
+    if (level === "auto" && off) considerHit(hit, "auto", true);
+    else if (off) considerHit(hit, "prompt", true);
+  }
+
   // A page can hold the end of one surah and the start of the next (e.g. page 580: 76:26-31, 77:1-19). The engine's
   // expected passage is one surah and it never relocates out of it, so expect the surah segment the reciter is in and
   // move on to the page's next segment once they reach the current segment's last ayah. The engine skips the basmala
@@ -2445,15 +2732,20 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     sumBox.hidden = true;
     expectedSurah = 0;
     expectedKey = "";
+    wrongKeys.clear();
+    relocateGuess = null;
+    lastLocateQuery = "";
+    hideLocatePrompt();
     const retrying = Boolean(retryKey);
+    locatePhase = retrying ? "locked" : "searching";
     if (retrying) {
       const [s, a] = retryKey.split(":").map(Number);
       engine.zipformer?.setExpected({ surah: s, ayah: a, ayahEnd: a });
       expectedKey = `${s}:${a}:${a}`;
       expectedSurah = s;
     } else {
-      const here = pages[page - 1]?.[0]?.[0];
-      if (here) expectPage();
+      engine.zipformer?.setExpected(null);
+      setPageHint();
     }
     micOn = true;
     seqS = 0;
@@ -2480,7 +2772,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
       const word = w === "*" ? "" : wordAt(Number(w));
       setStatus(() => t("st.repeat"), () => t("st.onlyHere", { p: `${surahName(Number(s))} ${a}${word}` }));
     } else {
-      setStatus(() => t("st.listening"), () => t("st.hidden"));
+      setStatus(() => t("st.searching"), () => t("st.searchingSub"));
     }
     const micId = micChoice;
     const audio = {
@@ -2707,6 +2999,9 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     shown.clear();
     freshKey = "";
     expectedSurah = 0;
+    locatePhase = "off";
+    hideLocatePrompt();
+    wrongKeys.clear();
     const fixed = retryClose;
     retryClose = false;
     retryKey = "";
@@ -3544,7 +3839,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
           }
         }
         const sub = `${MADANI.has(s) ? t("idx.mad") : t("idx.mak")} — ${t("idx.ayahs", { n: num(counts[s - 1] ?? 0) })}`;
-        frag.appendChild(ixRow("t-ix-row", num(s), local, sub, pg, getLang() === "ar" || getLang() === "ur" ? undefined : ar));
+        frag.appendChild(ixRow("t-ix-row", num(s), local, sub, pg, getLang() === "ar" || getLang() === "ur" || getLang() === "fa" ? undefined : ar));
         shown += 1;
       }
       if (!q) while (nextJuz < 30) {
