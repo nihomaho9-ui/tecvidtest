@@ -42,7 +42,10 @@ function kindName(kind: string): string {
 const wordAt = (w: number): string => (w >= 0 ? t("word", { w: w + 1 }) : "");
 
 const BASE = import.meta.env.BASE_URL || "/";
-const QCF = "https://mushafuk.online/yazi-fonts/qcf/";
+const QCF_REMOTE = "https://mushafuk.online/yazi-fonts/qcf/";
+function qcfFontUrl(n: number): string {
+  return __TASHEEH_NATIVE__ ? asset(`qcf/p${n}.woff2`) : `${QCF_REMOTE}p${n}.woff2`;
+}
 const BISM = "\uFC41\uFC42\uFC43\uFC44";
 const STARTS =
   "1:1:2,2:2:3,3:50:3,4:77:2,5:106:8,6:128:3,7:151:3,8:177:3,9:187:2,10:208:2,11:221:9,12:235:11,13:249:3,14:255:5,15:262:3,16:267:9,17:282:3,18:293:12,19:305:3,20:312:7,21:322:3,22:332:2,23:342:2,24:350:2,25:359:13,26:367:2,27:377:2,28:385:10,29:396:10,30:404:12,31:411:3,32:415:2,33:418:2,34:428:3,35:434:10,36:440:6,37:446:2,38:453:2,39:458:6,40:467:5,41:477:3,42:483:3,43:489:7,44:496:3,45:499:2,46:502:9,47:507:2,48:511:3,49:515:9,50:518:3,51:520:14,52:523:10,53:526:2,54:528:12,55:531:7,56:534:9,57:537:13,58:542:3,59:545:9,60:549:2,61:551:9,62:553:3,63:554:9,64:556:2,65:558:2,66:560:3,67:562:3,68:564:8,69:566:12,70:568:11,71:570:7,72:572:3,73:574:3,74:575:10,75:577:8,76:578:12,77:580:9,78:582:3,79:583:10,80:585:2,81:586:4,82:587:3,83:587:14,84:589:5,85:590:4,86:591:3,87:591:12,88:592:7,89:593:5,90:594:8,91:595:4,92:595:13,93:596:8,94:596:15,95:597:5,96:597:11,97:598:6,98:598:11,99:599:8,100:599:14,101:600:6,102:600:13,103:601:3,104:601:7,105:601:13,106:602:3,107:602:8,108:602:14,109:603:3,110:603:8,111:603:13,112:604:3,113:604:7,114:604:12";
@@ -1276,7 +1279,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (!namesReady) {
       namesReady = Promise.all([
         new FontFace("surahnames", `url(${asset("sura_names.woff2")})`).load(),
-        new FontFace("QCF1", `url(${QCF}p1.woff2)`).load(),
+        new FontFace("QCF1", `url(${qcfFontUrl(1)})`).load(),
       ]).then((faces) => {
         faces.forEach((face) => document.fonts.add(face));
         loadedFonts.add(1);
@@ -1289,7 +1292,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (loadedFonts.has(n)) return Promise.resolve();
     const pending = fontLoads.get(n);
     if (pending) return pending;
-    const face = new FontFace(`QCF${n}`, `url(${QCF}p${n}.woff2)`);
+    const face = new FontFace(`QCF${n}`, `url(${qcfFontUrl(n)})`);
     const job = face
       .load()
       .then(() => {
@@ -2384,6 +2387,16 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
     if (!navigator.mediaDevices?.getUserMedia) {
       setStatus(() => t("st.noMic"), () => t("st.noMicSub"));
       return;
+    }
+    if (__TASHEEH_NATIVE__) {
+      const native = (window as unknown as { TasheehNative?: { requestMic?: () => Promise<boolean> } }).TasheehNative;
+      if (native?.requestMic) {
+        const ok = await native.requestMic();
+        if (!ok) {
+          setStatus(() => t("st.noMic"), () => t("st.noMicSub"));
+          return;
+        }
+      }
     }
     const engine = await ensureSession();
     engine.reset();
@@ -3623,7 +3636,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   if (document.fonts) void document.fonts.load('24px "TjQuran"', "\u0643").catch(() => undefined);
   // Reciter mp3s are gone: free the storage the old audio cache used.
   if ("caches" in window) void caches.delete("tartil-audio").catch(() => undefined);
-  if ("serviceWorker" in navigator) {
+  if ("serviceWorker" in navigator && !__TASHEEH_NATIVE__) {
     const sw = asset("sw.js");
     void navigator.serviceWorker.register(sw).catch(() => undefined);
   }

@@ -42,6 +42,7 @@ export default defineConfig({
     __MODEL_ID__: JSON.stringify(modelHash),
     __APP_VERSION__: JSON.stringify(appVersion),
     __BUILD_DATE__: JSON.stringify(buildDate),
+    __TASHEEH_NATIVE__: process.env.TASHEEH_NATIVE === "1",
   },
   build: {
     target: "es2022",
