@@ -43,8 +43,9 @@ const wordAt = (w: number): string => (w >= 0 ? t("word", { w: w + 1 }) : "");
 
 const BASE = import.meta.env.BASE_URL || "/";
 const QCF_REMOTE = "https://mushafuk.online/yazi-fonts/qcf/";
+const QCF_CACHE = "tasheeh-qcf";
 function qcfFontUrl(n: number): string {
-  return __TASHEEH_NATIVE__ ? asset(`qcf/p${n}.woff2`) : `${QCF_REMOTE}p${n}.woff2`;
+  return `${QCF_REMOTE}p${n}.woff2`;
 }
 const BISM = "\uFC41\uFC42\uFC43\uFC44";
 const STARTS =
@@ -1278,28 +1279,55 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
   function loadNames(): Promise<void> {
     if (!namesReady) {
       namesReady = Promise.all([
-        new FontFace("surahnames", `url(${asset("sura_names.woff2")})`).load(),
-        new FontFace("QCF1", `url(${qcfFontUrl(1)})`).load(),
-      ]).then((faces) => {
-        faces.forEach((face) => document.fonts.add(face));
-        loadedFonts.add(1);
-      });
+        new FontFace("surahnames", `url(${asset("sura_names.woff2")})`).load().then((face) => {
+          document.fonts.add(face);
+        }),
+        loadPageFont(1),
+      ]).then(() => undefined);
     }
     return namesReady;
   }
 
+  // Native builds skip the service worker, so page fonts are fetched from mushafuk.online
+  // and kept in Cache Storage. After the first download a page renders offline. If the
+  // font is missing (airplane mode before that page was opened), the existing font-fail
+  // banner is shown and QCF glyph codes are left unpainted — they are not Unicode and
+  // cannot be shown correctly with the bundled Amiri fallback. The app does not crash.
   function loadPageFont(n: number): Promise<void> {
     if (loadedFonts.has(n)) return Promise.resolve();
     const pending = fontLoads.get(n);
     if (pending) return pending;
-    const face = new FontFace(`QCF${n}`, `url(${qcfFontUrl(n)})`);
-    const job = face
-      .load()
-      .then(() => {
-        document.fonts.add(face);
-        loadedFonts.add(n);
-      })
-      .finally(() => fontLoads.delete(n));
+    const job = (async () => {
+      const url = qcfFontUrl(n);
+      let face: FontFace;
+      if (__TASHEEH_NATIVE__) {
+        let buf: ArrayBuffer | undefined;
+        if ("caches" in window) {
+          try {
+            const cache = await caches.open(QCF_CACHE);
+            const hit = await cache.match(url);
+            if (hit?.ok) buf = await hit.arrayBuffer();
+            else {
+              const res = await fetch(url, { mode: "cors", credentials: "omit" });
+              if (res.ok) {
+                await cache.put(url, res.clone());
+                buf = await res.arrayBuffer();
+              }
+            }
+          } catch {
+            buf = undefined;
+          }
+        }
+        face = buf
+          ? new FontFace(`QCF${n}`, buf)
+          : new FontFace(`QCF${n}`, `url(${url})`);
+      } else {
+        face = new FontFace(`QCF${n}`, `url(${url})`);
+      }
+      await face.load();
+      document.fonts.add(face);
+      loadedFonts.add(n);
+    })().finally(() => fontLoads.delete(n));
     fontLoads.set(n, job);
     return job;
   }
@@ -3250,7 +3278,7 @@ export function mountTartil(root: HTMLElement, opts?: { hash?: boolean }): () =>
           if (name.startsWith("tartil-model-") || name === "tartil-v1" || /\/model\.onnx(\?|$)/.test(url)) z.model += size;
           else if (name === "tartil-wasm" || /\/ort\//.test(url)) z.wasm += size;
           else if (name === "tartil-corpus" || /\/corpus\.json(\?|$)/.test(url)) z.corpus += size;
-          else if (url.startsWith(QCF)) {
+          else if (url.startsWith(QCF_REMOTE)) {
             z.fonts += size;
             z.fontsN += 1;
           } else if (/\/pg\/\d+\.json/.test(url)) {
