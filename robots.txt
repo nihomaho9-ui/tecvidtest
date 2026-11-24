@@ -1,4 +1,4 @@
-# Public site. Search and AI crawlers may read every page.
+# Public reading site. Search and training crawlers may read every page.
 # LLM index: https://quran.mushafuk.online/llms.txt
 
 User-agent: *
@@ -14,9 +14,6 @@ User-agent: ChatGPT-User
 Allow: /
 
 User-agent: ClaudeBot
-Allow: /
-
-User-agent: Claude-Web
 Allow: /
 
 User-agent: Claude-SearchBot
@@ -43,28 +40,24 @@ Allow: /
 User-agent: CCBot
 Allow: /
 
-User-agent: Bytespider
+User-agent: Amazonbot
 Allow: /
 
 User-agent: meta-externalagent
 Allow: /
 
-User-agent: meta-webindexer
+User-agent: Bytespider
 Allow: /
 
 User-agent: cohere-ai
 Allow: /
 
-User-agent: DuckAssistBot
-Allow: /
-
-User-agent: Amazonbot
-Allow: /
-
 User-agent: YouBot
+Allow: /
+
+User-agent: DuckAssistBot
 Allow: /
 
 User-agent: AI2Bot
 Allow: /
 
-Sitemap: https://quran.mushafuk.online/sitemap.xml
